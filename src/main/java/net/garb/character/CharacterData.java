@@ -1,0 +1,109 @@
+package net.garb.character;
+
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.network.ServerPlayerEntity;
+
+public class CharacterData {
+
+    private String name;
+    private String skinUsername;
+    private boolean exists;
+    private long lastPlayed;
+
+    private NbtCompound playerNbt;
+
+    public CharacterData() {
+        this.exists = false;
+        this.name = "";
+        this.skinUsername = "";
+    }
+
+    public void captureFromPlayer(ServerPlayerEntity player) {
+        this.exists = true;
+        this.lastPlayed = System.currentTimeMillis();
+
+        this.playerNbt = new NbtCompound();
+        player.writeNbt(this.playerNbt);
+    }
+
+    public NbtCompound toNbt() {
+        NbtCompound nbt = new NbtCompound();
+
+        nbt.putBoolean("exists", exists);
+        nbt.putString("name", name != null ? name : "");
+        nbt.putString("skinUsername", skinUsername != null ? skinUsername : "");
+        nbt.putLong("lastPlayed", lastPlayed);
+        nbt.put("playerNbt", playerNbt);
+
+        return nbt;
+    }
+
+
+    public NbtCompound getPlayerNbt() {
+        NbtCompound nbt = this.playerNbt;
+        if (nbt == null) {
+            nbt = new NbtCompound();
+        }
+        nbt.putBoolean("exists", exists);
+        nbt.putString("name", name != null ? name : "");
+        nbt.putString("skinUsername", skinUsername != null ? skinUsername : "");
+        nbt.putLong("lastPlayed", lastPlayed);
+        return nbt;
+    }
+
+    public static CharacterData fromNbt(NbtCompound nbt) {
+        CharacterData data = new CharacterData();
+        data.exists = nbt.getBoolean("exists");
+        data.name = nbt.contains("name") ? nbt.getString("name") : "";
+        data.skinUsername = nbt.contains("skinUsername") ? nbt.getString("skinUsername") : "";
+        data.lastPlayed = nbt.getLong("lastPlayed");
+        data.playerNbt = nbt.getCompound("playerNbt");
+        return data;
+    }
+
+    public boolean exists() {
+        return exists;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getSkinUsername() {
+        return skinUsername;
+    }
+
+    public void setSkinUsername(String skinUsername) {
+        this.skinUsername = skinUsername;
+    }
+
+    public long getLastPlayed() {
+        return lastPlayed;
+    }
+
+    public float getHealth() {
+        if (playerNbt == null) return 20f;
+        if (playerNbt.contains("Health")) return playerNbt.getFloat("Health");
+        return 20f;
+    }
+
+    public int getFoodLevel() {
+        if (playerNbt == null) return 20;
+        if (playerNbt.contains("foodLevel")) return playerNbt.getInt("foodLevel");
+        return 20;
+    }
+
+    public int getExperienceLevel() {
+        if (playerNbt == null) return 0;
+        if (playerNbt.contains("XpLevel")) return playerNbt.getInt("XpLevel");
+        return 0;
+    }
+
+    public void setHealth(float health) {
+        if (playerNbt != null) playerNbt.putFloat("Health", health);
+    }
+}

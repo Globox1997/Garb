@@ -1,0 +1,18 @@
+{
+  "screen.garb.title": "Choose your Character",
+  "screen.garb.slot": "Slot %s",
+  "screen.garb.empty": "[ Empty ]",
+  "screen.garb.create": "Create",
+  "screen.garb.select": "Play",
+  "screen.garb.hp": "Health",
+  "screen.garb.hunger": "Hunger",
+  "screen.garb.xp": "Experience",
+  "screen.garb.last_played": "Last played",
+
+  "screen.garb.create_character": "Create Character",
+  "screen.garb.enter_name": "Character Name",
+  "screen.garb.name_placeholder": "e.g. Notch",
+  "screen.garb.confirm": "Create",
+  "screen.garb.skin_preview_hint": "Type a name to preview",
+  "screen.garb.skin_loading": "Loading skin..."
+}
