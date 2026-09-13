@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 public class CharacterSaveManager {
 
@@ -59,5 +60,43 @@ public class CharacterSaveManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static boolean isNameTaken(MinecraftServer server, String name) {
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+
+        Path root = server.getSavePath(WorldSavePath.ROOT).resolve("characters");
+        if (!Files.exists(root)) {
+            return false;
+        }
+
+        try (Stream<Path> playerDirs = Files.list(root)) {
+            for (Path playerDir : (Iterable<Path>) playerDirs::iterator) {
+                if (!Files.isDirectory(playerDir)) {
+                    continue;
+                }
+                for (int i = 0; i < SLOT_COUNT; i++) {
+                    Path slotPath = playerDir.resolve("slot_" + i + ".nbt");
+                    if (!Files.exists(slotPath)) {
+                        continue;
+                    }
+                    try {
+                        NbtCompound nbt = NbtIo.readCompressed(slotPath, NbtSizeTracker.ofUnlimitedBytes());
+                        CharacterData data = CharacterData.fromNbt(nbt);
+                        if (data.exists() && name.equalsIgnoreCase(data.getName())) {
+                            return true;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }

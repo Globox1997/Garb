@@ -2,8 +2,10 @@ package net.garb.screen;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
 import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
+import net.garb.network.packet.C2SCheckNamePacket;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -29,6 +31,7 @@ public class CreateCharacterScreen extends Screen {
     private TextFieldWidget skinUsernameField;
 
     private enum SkinLoadState {IDLE, LOADING, SUCCESS, ERROR}
+    private enum NameCheckState {IDLE, CHECKING, AVAILABLE, TAKEN}
 
     private SkinLoadState skinLoadState = SkinLoadState.IDLE;
     private String skinErrorMessage = null;
@@ -37,6 +40,10 @@ public class CreateCharacterScreen extends Screen {
     private String lastSearchedSkin = "";
     private long lastSkinTypedTime = 0;
     private static final long DEBOUNCE_MS = 800;
+
+    private NameCheckState nameCheckState = NameCheckState.IDLE;
+    private String lastCheckedName = "";
+    private long lastNameTypedTime = 0;
 
     private List<CharacterClass> classes = new ArrayList<>();
     private int selectedClassIndex = 0;
@@ -75,6 +82,7 @@ public class CreateCharacterScreen extends Screen {
         characterNameField = new TextFieldWidget(this.textRenderer, fieldX, cy - 60, fieldW, 20, Text.translatable("screen.garb.name"));
         characterNameField.setMaxLength(32);
         characterNameField.setPlaceholder(Text.translatable("screen.garb.character_name_placeholder"));
+        characterNameField.setChangedListener(this::onCharacterNameChanged);
         characterNameField.setFocused(true);
         this.addSelectableChild(characterNameField);
 
@@ -108,6 +116,11 @@ public class CreateCharacterScreen extends Screen {
         String current = skinUsernameField.getText().trim();
         if (!current.isEmpty() && !current.equals(lastSearchedSkin) && skinLoadState != SkinLoadState.LOADING && System.currentTimeMillis() - lastSkinTypedTime > DEBOUNCE_MS) {
             triggerSkinLoad(current);
+        }
+
+        String currentName = characterNameField.getText().trim();
+        if (!currentName.isEmpty() && !currentName.equals(lastCheckedName) && nameCheckState != NameCheckState.CHECKING && System.currentTimeMillis() - lastNameTypedTime > DEBOUNCE_MS) {
+            triggerNameCheck(currentName);
         }
     }
 
@@ -156,6 +169,9 @@ public class CreateCharacterScreen extends Screen {
         String charName = characterNameField.getText().trim();
         if (charName.isEmpty()) {
             characterNameField.setPlaceholder(Text.translatable("screen.garb.name_required"));
+            return;
+        }
+        if (nameCheckState == NameCheckState.TAKEN && charName.equals(lastCheckedName)) {
             return;
         }
 
@@ -208,6 +224,8 @@ public class CreateCharacterScreen extends Screen {
         skinUsernameField.render(context, 0, 0, 0);
 
         int previewCx = x + (panelW - PANEL_PADDING * 2) / 2;
+        renderNameCheckStatus(context, previewCx, cy + 6);
+
         int previewY = cy + 20;
         renderSkinPreview(context, previewCx, previewY);
     }
@@ -356,6 +374,34 @@ public class CreateCharacterScreen extends Screen {
 
     private void drawSkinPart(DrawContext context, Identifier texture, int x, int y, int w, int h, int u, int v, int rW, int rH) {
         context.drawTexture(texture, x, y, w, h, u, v, rW, rH, 64, 64);
+    }
+
+    private void onCharacterNameChanged(String value) {
+        lastNameTypedTime = System.currentTimeMillis();
+        if (!value.trim().equals(lastCheckedName)) {
+            nameCheckState = NameCheckState.IDLE;
+        }
+    }
+
+    private void triggerNameCheck(String name) {
+        lastCheckedName = name;
+        nameCheckState = NameCheckState.CHECKING;
+        ClientConfigurationNetworking.send(new C2SCheckNamePacket(name));
+    }
+
+    public void onNameCheckResult(String name, boolean taken) {
+        if (!name.equals(lastCheckedName)) {
+            return;
+        }
+        nameCheckState = taken ? NameCheckState.TAKEN : NameCheckState.AVAILABLE;
+    }
+
+    private void renderNameCheckStatus(DrawContext context, int cx, int y) {
+        switch (nameCheckState) {
+            case CHECKING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.checking_name"), cx, y, COLOR_MUTED);
+            case TAKEN -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.name_taken"), cx, y, COLOR_ERROR);
+            default -> {}
+        }
     }
 
     private List<String> wrapText(String text, int maxPixelWidth) {

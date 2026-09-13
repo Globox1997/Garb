@@ -7,6 +7,8 @@ import net.garb.character.CharacterClassRegistry;
 import net.garb.network.packet.C2SSelectCharacterPacket;
 import net.garb.network.packet.S2CCharacterDataPacket;
 import net.garb.network.packet.S2CClassDataPacket;
+import net.garb.network.packet.S2CNameCheckResultPacket;
+import net.garb.screen.CreateCharacterScreen;
 import net.garb.screen.GarbScreen;
 
 import java.util.function.Consumer;
@@ -25,6 +27,13 @@ public class GarbClientPacket {
             context.client().execute(() -> {
                 CharacterClassRegistry.clear();
                 packet.classes().forEach(CharacterClassRegistry::register);
+            });
+        });
+        ClientConfigurationNetworking.registerGlobalReceiver(S2CNameCheckResultPacket.ID, (packet, context) -> {
+            context.client().execute(() -> {
+                if (context.client().currentScreen instanceof CreateCharacterScreen screen) {
+                    screen.onNameCheckResult(packet.name(), packet.taken());
+                }
             });
         });
     }

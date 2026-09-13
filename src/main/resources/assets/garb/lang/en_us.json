@@ -23,5 +23,7 @@
   "screen.garb.character_name_placeholder": "Character Name",
   "screen.garb.skin_username_placeholder": "Notch",
   "screen.garb.no_classes_loaded": "No classes Lloaded",
-  "screen.garb.name_required": "Name Required"
+  "screen.garb.name_required": "Name Required",
+  "screen.garb.checking_name": "Checking Name",
+  "screen.garb.name_taken": "Name Taken"
 }
