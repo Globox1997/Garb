@@ -7,6 +7,7 @@ public class CharacterData {
 
     private String name;
     private String skinUsername;
+    private String classId;
     private boolean exists;
     private long lastPlayed;
 
@@ -16,6 +17,7 @@ public class CharacterData {
         this.exists = false;
         this.name = "";
         this.skinUsername = "";
+        this.classId = "";
     }
 
     public void captureFromPlayer(ServerPlayerEntity player) {
@@ -32,21 +34,20 @@ public class CharacterData {
         nbt.putBoolean("exists", exists);
         nbt.putString("name", name != null ? name : "");
         nbt.putString("skinUsername", skinUsername != null ? skinUsername : "");
+        nbt.putString("classId", classId != null ? classId : "");
         nbt.putLong("lastPlayed", lastPlayed);
-        nbt.put("playerNbt", playerNbt);
+        nbt.put("playerNbt", playerNbt != null ? playerNbt : new NbtCompound());
 
         return nbt;
     }
 
 
     public NbtCompound getPlayerNbt() {
-        NbtCompound nbt = this.playerNbt;
-        if (nbt == null) {
-            nbt = new NbtCompound();
-        }
+        NbtCompound nbt = (this.playerNbt != null ? this.playerNbt.copy() : new NbtCompound());
         nbt.putBoolean("exists", exists);
         nbt.putString("name", name != null ? name : "");
         nbt.putString("skinUsername", skinUsername != null ? skinUsername : "");
+        nbt.putString("classId", classId != null ? classId : "");
         nbt.putLong("lastPlayed", lastPlayed);
         return nbt;
     }
@@ -56,6 +57,7 @@ public class CharacterData {
         data.exists = nbt.getBoolean("exists");
         data.name = nbt.contains("name") ? nbt.getString("name") : "";
         data.skinUsername = nbt.contains("skinUsername") ? nbt.getString("skinUsername") : "";
+        data.classId = nbt.contains("classId") ? nbt.getString("classId") : "";
         data.lastPlayed = nbt.getLong("lastPlayed");
         data.playerNbt = nbt.getCompound("playerNbt");
         return data;
@@ -79,6 +81,14 @@ public class CharacterData {
 
     public void setSkinUsername(String skinUsername) {
         this.skinUsername = skinUsername;
+    }
+
+    public String getClassId() {
+        return classId;
+    }
+
+    public void setClassId(String classId) {
+        this.classId = classId;
     }
 
     public long getLastPlayed() {

@@ -9,10 +9,19 @@
   "screen.garb.xp": "Experience",
   "screen.garb.last_played": "Last played",
 
+  "screen.garb.character": "Character",
   "screen.garb.create_character": "Create Character",
-  "screen.garb.enter_name": "Character Name",
+  "screen.garb.name": "Name",
   "screen.garb.name_placeholder": "e.g. Notch",
   "screen.garb.confirm": "Create",
   "screen.garb.skin_preview_hint": "Type a name to preview",
-  "screen.garb.skin_loading": "Loading skin..."
+  "screen.garb.skin_loading": "Loading skin...",
+  "screen.garb.choose_class": "Choose Class",
+  "screen.garb.skin_username": "Skin Username",
+  "screen.garb.class_stats": "Class Stats",
+  "screen.garb.starter_items": "Starter Items",
+  "screen.garb.character_name_placeholder": "Character Name",
+  "screen.garb.skin_username_placeholder": "Notch",
+  "screen.garb.no_classes_loaded": "No classes Lloaded",
+  "screen.garb.name_required": "Name Required"
 }

@@ -2,12 +2,12 @@ package net.garb.screen;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.garb.network.packet.C2SSelectCharacterPacket;
 import net.garb.network.packet.S2CCharacterDataPacket;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.network.ClientConfigurationNetworkHandler;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -43,11 +43,9 @@ public class GarbScreen extends Screen {
 
     private int hoveredSlot = -1;
 
-    private final Consumer<Integer> selectCallback;
+    private final Consumer<C2SSelectCharacterPacket> selectCallback;
 
-    private final ClientConfigurationNetworkHandler clientConfigurationNetworkHandler;
-
-    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, Consumer<Integer> selectCallback) {
+    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, Consumer<C2SSelectCharacterPacket> selectCallback) {
         super(Text.translatable("screen.garb.title"));
         this.slots = slots;
         this.slotSkins = new ArrayList<>();
@@ -55,8 +53,6 @@ public class GarbScreen extends Screen {
             this.slotSkins.add(null);
         }
         this.selectCallback = selectCallback;
-
-        this.clientConfigurationNetworkHandler = clientConfigurationNetworkHandler;
     }
 
     @Override
@@ -91,8 +87,16 @@ public class GarbScreen extends Screen {
 
             String label = slots.get(i).exists() ? Text.translatable("screen.garb.select").getString() : Text.translatable("screen.garb.create").getString();
 
-
-            this.addDrawableChild(ButtonWidget.builder(Text.literal(label), btn -> selectSlot(slot)).position(cardX, buttonY).size(CARD_WIDTH, BUTTON_HEIGHT).build());
+            this.addDrawableChild(ButtonWidget.builder(Text.literal(label), btn -> {
+                if (slots.get(slot).exists()) {
+                    selectCallback.accept(new C2SSelectCharacterPacket(slot, null, null, null));
+                    this.client.setScreen(null);
+                } else {
+                    this.client.setScreen(new CreateCharacterScreen(this, result -> {
+                        selectCallback.accept(new C2SSelectCharacterPacket(slot, result.characterName(), result.skinUsername(), result.classId()));
+                    }));
+                }
+            }).position(cardX, buttonY).size(CARD_WIDTH, BUTTON_HEIGHT).build());
         }
     }
 
@@ -139,14 +143,14 @@ public class GarbScreen extends Screen {
             return;
         }
 
+        if (slot.name() != null && !slot.name().isEmpty()) {
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(slot.name()), x + CARD_WIDTH / 2, textY - 10, COLOR_TITLE);
+        }
+
         SlotSkin skin = index < this.slotSkins.size() ? this.slotSkins.get(index) : null;
         if (skin != null) {
             int scale = 5;
             int playerX = x + (CARD_WIDTH / 2) - (scale * 2);
-
-            if (slot.name() != null && !slot.name().isEmpty()) {
-                context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(slot.name()), x + CARD_WIDTH / 2, textY - 10, COLOR_TITLE);
-            }
 
             drawPlayer(context, skin.textureId(), skin.slim(), playerX, textY, scale);
             textY += scale * 8 + 6;
@@ -187,12 +191,6 @@ public class GarbScreen extends Screen {
         if (hours > 0) return hours + "h ago";
         if (minutes > 0) return minutes + "m ago";
         return "Just now";
-    }
-
-    private void selectSlot(int slot) {
-//        ClientPlayNetworking.send(new C2SSelectCharacterPacket(slot));
-        this.selectCallback.accept(slot);
-        this.client.setScreen(null);
     }
 
     private static void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {

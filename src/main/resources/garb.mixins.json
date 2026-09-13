@@ -3,7 +3,8 @@
   "package": "net.garb.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "PlayerManagerMixin"
+    "PlayerManagerMixin",
+    "ServerPlayerEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
@@ -12,10 +13,6 @@
     "requireAnnotations": true
   },
   "client": [
-    "client.AbstractClientPlayerEntityMixin",
-    "client.ClientCommonNetworkHandlerAccessor",
-    "client.ClientConfigurationNetworkHandlerAccessor",
-    "client.PlayerEntityMixin",
-    "client.WorldMixin"
+    "client.PlayerEntityMixin"
   ]
 }

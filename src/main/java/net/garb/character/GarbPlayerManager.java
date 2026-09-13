@@ -12,11 +12,12 @@ public class GarbPlayerManager {
     }
 
     public static int getSelection(UUID uuid) {
-        return SLOTS.get(uuid);
+        return SLOTS.getOrDefault(uuid, -1);
     }
 
     public static int getAndRemoveSelection(UUID uuid) {
-        return SLOTS.remove(uuid);
+        Integer removed = SLOTS.remove(uuid);
+        return removed != null ? removed : -1;
     }
 
     public static boolean hasSelection(UUID uuid) {
