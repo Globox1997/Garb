@@ -25,5 +25,10 @@
   "screen.garb.no_classes_loaded": "No classes Lloaded",
   "screen.garb.name_required": "Name Required",
   "screen.garb.checking_name": "Checking Name",
-  "screen.garb.name_taken": "Name Taken"
+  "screen.garb.name_taken": "Name Taken",
+
+  "screen.garb.last_played.d_ago": "%s d ago",
+  "screen.garb.last_played.h_ago": "%s h ago",
+  "screen.garb.last_played.m_ago": "%s m ago",
+  "screen.garb.last_played.just_now": "Just now"
 }

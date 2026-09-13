@@ -175,24 +175,32 @@ public class GarbScreen extends Screen {
         textY += lineHeight + 4;
 
         context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.last_played"), textX, textY, COLOR_LABEL);
-        context.drawTextWithShadow(this.textRenderer, Text.literal(formatLastPlayed(slot.lastPlayed())), textX, textY + lineHeight, COLOR_VALUE);
+        context.drawTextWithShadow(this.textRenderer, formatLastPlayed(slot.lastPlayed()), textX, textY + lineHeight, COLOR_VALUE);
     }
 
     private boolean isMouseOverCard(int mouseX, int mouseY, int cardX, int cardY) {
         return mouseX >= cardX && mouseX <= cardX + CARD_WIDTH && mouseY >= cardY && mouseY <= cardY + CARD_HEIGHT;
     }
 
-    private String formatLastPlayed(long timestamp) {
-        if (timestamp <= 0) return "-";
+    private Text formatLastPlayed(long timestamp) {
+        if (timestamp <= 0) {
+            return Text.of("-");
+        }
         long diff = System.currentTimeMillis() - timestamp;
         long minutes = diff / 60000;
         long hours = minutes / 60;
         long days = hours / 24;
 
-        if (days > 0) return days + "d ago";
-        if (hours > 0) return hours + "h ago";
-        if (minutes > 0) return minutes + "m ago";
-        return "Just now";
+        if (days > 0) {
+            return Text.translatable("screen.garb.last_played.d_ago", days);
+        }
+        if (hours > 0) {
+            return Text.translatable("screen.garb.last_played.h_ago", hours);
+        }
+        if (minutes > 0) {
+            return Text.translatable("screen.garb.last_played.m_ago", minutes);
+        }
+        return Text.translatable("screen.garb.last_played.just_now");
     }
 
     private static void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {
