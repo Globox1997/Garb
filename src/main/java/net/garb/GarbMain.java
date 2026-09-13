@@ -10,9 +10,9 @@ public class GarbMain implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        GarbServerPacket.init();
         EventInit.init();
         LoaderInit.init();
-        GarbServerPacket.init();
     }
 
     public static Identifier identifierOf(String name) {

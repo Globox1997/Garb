@@ -2,11 +2,15 @@ package net.garb.network;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.garb.character.CharacterData;
 import net.garb.character.CharacterSaveManager;
+import net.garb.character.GarbActiveCharacterCache;
 import net.garb.character.GarbPlayerManager;
 import net.garb.init.EventInit;
 import net.garb.network.packet.*;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.util.UUID;
 
@@ -16,6 +20,7 @@ public class GarbServerPacket {
         PayloadTypeRegistry.configurationS2C().register(S2CClassDataPacket.ID, S2CClassDataPacket.CODEC);
         PayloadTypeRegistry.configurationS2C().register(S2CCharacterDataPacket.ID, S2CCharacterDataPacket.CODEC);
         PayloadTypeRegistry.configurationS2C().register(S2CNameCheckResultPacket.ID, S2CNameCheckResultPacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(S2CPlayerCosmeticsPacket.ID, S2CPlayerCosmeticsPacket.CODEC);
         PayloadTypeRegistry.configurationC2S().register(C2SSelectCharacterPacket.ID, C2SSelectCharacterPacket.CODEC);
         PayloadTypeRegistry.configurationC2S().register(C2SCheckNamePacket.ID, C2SCheckNamePacket.CODEC);
 
@@ -51,5 +56,38 @@ public class GarbServerPacket {
                     context.networkHandler().completeTask(EventInit.CharacterSelectionTask.KEY);
                 })
         );
+    }
+
+    public static void syncOnJoin(ServerPlayerEntity player, String name, String skinUsername) {
+        S2CPlayerCosmeticsPacket selfPacket = new S2CPlayerCosmeticsPacket(player.getUuid(), name, skinUsername);
+//        player.getServer().getPlayerManager().sendToAll(selfPacket);
+//
+//        for (ServerPlayerEntity serverPlayerEntity : this.players) {
+//            serverPlayerEntity.networkHandler.sendPacket(packet);
+//        }
+
+        for (ServerPlayerEntity other : player.getServer().getPlayerManager().getPlayerList()) {
+            ServerPlayNetworking.send(player, selfPacket);
+
+            if (other == player) {
+                continue;
+            }
+            GarbActiveCharacterCache.get(other.getUuid()).ifPresent(otherActive ->
+                    ServerPlayNetworking.send(player, new S2CPlayerCosmeticsPacket(other.getUuid(), otherActive.name(), otherActive.skinUsername()))
+            );
+        }
+    }
+
+    public static void saveCurrentCharacter(ServerPlayerEntity player, MinecraftServer server) {
+        int slot = GarbPlayerManager.getAndRemoveSelection(player.getUuid());
+        if (slot == -1) {
+            return;
+        }
+
+        CharacterData data = CharacterSaveManager.load(server, player.getUuid(), slot);
+        data.captureFromPlayer(player);
+        CharacterSaveManager.save(server, player.getUuid(), slot, data);
+
+        GarbActiveCharacterCache.clear(player.getUuid());
     }
 }

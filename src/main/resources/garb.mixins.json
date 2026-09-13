@@ -3,6 +3,7 @@
   "package": "net.garb.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "PlayerEntityMixin",
     "PlayerManagerMixin",
     "ServerPlayerEntityMixin"
   ],
@@ -13,6 +14,7 @@
     "requireAnnotations": true
   },
   "client": [
-    "client.PlayerEntityMixin"
+    "client.PlayerEntityMixin",
+    "client.PlayerListEntryMixin"
   ]
 }

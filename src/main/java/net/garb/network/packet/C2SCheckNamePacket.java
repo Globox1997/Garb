@@ -9,8 +9,7 @@ public record C2SCheckNamePacket(String name) implements CustomPayload {
 
     public static final CustomPayload.Id<C2SCheckNamePacket> ID = new CustomPayload.Id<>(GarbMain.identifierOf("check_name"));
 
-    public static final PacketCodec<PacketByteBuf, C2SCheckNamePacket> CODEC =
-            PacketCodec.of(C2SCheckNamePacket::write, C2SCheckNamePacket::read);
+    public static final PacketCodec<PacketByteBuf, C2SCheckNamePacket> CODEC = PacketCodec.of(C2SCheckNamePacket::write, C2SCheckNamePacket::read);
 
     private static void write(C2SCheckNamePacket packet, PacketByteBuf buf) {
         buf.writeString(packet.name() != null ? packet.name() : "");

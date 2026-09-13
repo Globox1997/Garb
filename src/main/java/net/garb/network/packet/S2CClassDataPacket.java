@@ -17,8 +17,7 @@ public record S2CClassDataPacket(List<CharacterClass> classes) implements Custom
 
     public static final CustomPayload.Id<S2CClassDataPacket> ID = new CustomPayload.Id<>(GarbMain.identifierOf("class_data"));
 
-    public static final PacketCodec<PacketByteBuf, S2CClassDataPacket> CODEC =
-            PacketCodec.of(S2CClassDataPacket::write, S2CClassDataPacket::read);
+    public static final PacketCodec<PacketByteBuf, S2CClassDataPacket> CODEC = PacketCodec.of(S2CClassDataPacket::write, S2CClassDataPacket::read);
 
     private static void write(S2CClassDataPacket packet, PacketByteBuf buf) {
         buf.writeInt(packet.classes.size());
