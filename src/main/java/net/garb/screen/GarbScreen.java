@@ -2,6 +2,7 @@ package net.garb.screen;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.garb.GarbMain;
 import net.garb.network.packet.C2SSelectCharacterPacket;
 import net.garb.network.packet.S2CCharacterDataPacket;
 import net.garb.util.SkinLoader;
@@ -40,6 +41,11 @@ public class GarbScreen extends Screen {
     private static final int COLOR_HP = 0xFFFF5555;
     private static final int COLOR_HUNGER = 0xFFFFAA55;
     private static final int COLOR_XP = 0xFF55FF55;
+
+    private static final Identifier ICON_HEALTH = GarbMain.identifierOf("textures/class/health_icon.png");
+    private static final Identifier ICON_HUNGER = GarbMain.identifierOf("textures/class/hunger_icon.png");
+    private static final Identifier ICON_XP = GarbMain.identifierOf("textures/class/xp_icon.png");
+    private static final int ICON_SIZE = 9;
 
     private int hoveredSlot = -1;
 
@@ -159,21 +165,17 @@ public class GarbScreen extends Screen {
             textY += 26;
         }
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.hp"), textX, textY, COLOR_LABEL);
-        context.drawTextWithShadow(this.textRenderer, Text.literal(String.format("%.1f / 20.0", slot.health())), textX, textY + lineHeight, COLOR_HP);
-        textY += lineHeight * 2 + 4;
+        drawIconStat(context, ICON_HEALTH, String.format("%.1f / 20.0", slot.health()), textX, textY, COLOR_HP);
+        textY += lineHeight + 4;
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.hunger"), textX, textY, COLOR_LABEL);
-        context.drawTextWithShadow(this.textRenderer, Text.literal(slot.foodLevel() + " / 20"), textX, textY + lineHeight, COLOR_HUNGER);
-        textY += lineHeight * 2 + 4;
+        drawIconStat(context, ICON_HUNGER, slot.foodLevel() + " / 20", textX, textY, COLOR_HUNGER);
+        textY += lineHeight + 4;
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.xp"), textX, textY, COLOR_LABEL);
-        context.drawTextWithShadow(this.textRenderer, Text.literal("Level " + slot.xpLevel()), textX, textY + lineHeight, COLOR_XP);
-        textY += lineHeight * 2 + 4;
+        drawIconStat(context, ICON_XP, "Level " + slot.xpLevel(), textX, textY, COLOR_XP);
+        textY += lineHeight + 4;
 
         context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.last_played"), textX, textY, COLOR_LABEL);
         context.drawTextWithShadow(this.textRenderer, Text.literal(formatLastPlayed(slot.lastPlayed())), textX, textY + lineHeight, COLOR_VALUE);
-
     }
 
     private boolean isMouseOverCard(int mouseX, int mouseY, int cardX, int cardY) {
@@ -209,6 +211,12 @@ public class GarbScreen extends Screen {
 
     private static void drawSkinPart(DrawContext context, Identifier texture, int x, int y, int width, int height, int u, int v, int regionW, int regionH) {
         context.drawTexture(texture, x, y, width, height, u, v, regionW, regionH, 64, 64);
+    }
+
+    private void drawIconStat(DrawContext context, Identifier icon, String valueText, int x, int y, int color) {
+        context.drawTexture(icon, x, y, ICON_SIZE, ICON_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+        int textY = y + (ICON_SIZE - this.textRenderer.fontHeight) / 2;
+        context.drawTextWithShadow(this.textRenderer, Text.literal(valueText), x + ICON_SIZE + 4, textY, color);
     }
 
 }

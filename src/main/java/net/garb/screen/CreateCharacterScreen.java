@@ -3,6 +3,7 @@ package net.garb.screen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
+import net.garb.GarbMain;
 import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
 import net.garb.network.packet.C2SCheckNamePacket;
@@ -11,17 +12,25 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.entity.attribute.EntityAttribute;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 @Environment(EnvType.CLIENT)
 public class CreateCharacterScreen extends Screen {
 
     public record CreationResult(String characterName, String skinUsername, String classId) {
+    }
+
+    private record AttributeIconInfo(Identifier icon, Text label, double value, double defaultValue) {
     }
 
     private final Screen parent;
@@ -31,6 +40,7 @@ public class CreateCharacterScreen extends Screen {
     private TextFieldWidget skinUsernameField;
 
     private enum SkinLoadState {IDLE, LOADING, SUCCESS, ERROR}
+
     private enum NameCheckState {IDLE, CHECKING, AVAILABLE, TAKEN}
 
     private SkinLoadState skinLoadState = SkinLoadState.IDLE;
@@ -61,6 +71,10 @@ public class CreateCharacterScreen extends Screen {
     private static final int COLOR_SPEED = 0xFF55FFFF;
     private static final int COLOR_DMG = 0xFFFFAA55;
     private static final int COLOR_ARMOR = 0xFFAAAAFF;
+
+    private static final int ICON_SIZE = 9;
+    private static final int ICON_RENDER_SIZE = 16;
+    private static final int ICON_GAP = 4;
 
     public CreateCharacterScreen(Screen parent, Consumer<CreationResult> onCreate) {
         super(Text.translatable("screen.garb.create_character"));
@@ -139,11 +153,11 @@ public class CreateCharacterScreen extends Screen {
         skinErrorMessage = null;
 
         SkinLoader.loadForUsername(username, result -> {
-            if (this.client == null){
+            if (this.client == null) {
                 return;
             }
             this.client.execute(() -> {
-                if (!username.equals(lastSearchedSkin)){
+                if (!username.equals(lastSearchedSkin)) {
                     return;
                 }
                 if (result.success()) {
@@ -202,7 +216,7 @@ public class CreateCharacterScreen extends Screen {
 
         renderMiddlePanel(context, panelW, cy);
 
-        renderRightPanel(context, panelW, cy);
+        renderRightPanel(context, panelW, cy, mouseX, mouseY);
 
         context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.create_character"), this.width / 2, PANEL_PADDING, COLOR_TITLE);
     }
@@ -296,7 +310,7 @@ public class CreateCharacterScreen extends Screen {
         }
     }
 
-    private void renderRightPanel(DrawContext context, int panelW, int cy) {
+    private void renderRightPanel(DrawContext context, int panelW, int cy, int mouseX, int mouseY) {
         int panelX = panelW * 2 + PANEL_PADDING;
         int panelX2 = this.width - PANEL_PADDING;
         int panelCx = (panelX + panelX2) / 2;
@@ -312,32 +326,22 @@ public class CreateCharacterScreen extends Screen {
         }
         CharacterClass selected = classes.get(selectedClassIndex);
         int textY = PANEL_PADDING + 40;
-        int lineH = 14;
 
-        renderStat(context, textX, textY, "Max Health", selected.getAttributes().getOrDefault("minecraft:max_health", 20.0), 20.0, COLOR_HP);
-        textY += lineH;
-
-        renderStat(context, textX, textY, "Attack Damage", selected.getAttributes().getOrDefault("minecraft:attack_damage", 2.0), 2.0, COLOR_DMG);
-        textY += lineH;
-
-        renderStat(context, textX, textY, "Armor", selected.getAttributes().getOrDefault("minecraft:armor", 0.0), 0.0, COLOR_ARMOR);
-        textY += lineH;
-
-        renderStat(context, textX, textY, "Speed", selected.getAttributes().getOrDefault("minecraft:movement_speed", 0.1), 0.1, COLOR_SPEED);
-        textY += lineH + 4;
+        List<AttributeIconInfo> attributeIcons = resolveChangedAttributeIcons(selected);
+        textY = renderAttributeIcons(context, textX, textY, panelX2 - textX - 8, attributeIcons, mouseX, mouseY);
+        textY += 8;
 
         context.fill(panelX + 8, textY, panelX2 - 8, textY + 1, COLOR_BORDER);
         textY += 8;
 
         context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.starter_items"), textX, textY, COLOR_LABEL);
-        textY += lineH;
+        textY += 14;
 
         if (selected.getStartingItems().isEmpty()) {
             context.drawTextWithShadow(this.textRenderer, Text.literal("—"), textX, textY, COLOR_MUTED);
         } else {
             for (CharacterClass.StartItem item : selected.getStartingItems()) {
                 String itemName = item.item().contains(":") ? item.item().split(":")[1].replace("_", " ") : item.item();
-
                 itemName = Character.toUpperCase(itemName.charAt(0)) + itemName.substring(1);
                 context.drawTextWithShadow(this.textRenderer, Text.literal("• " + itemName + " x" + item.count()), textX, textY, COLOR_VALUE);
                 textY += 10;
@@ -346,18 +350,6 @@ public class CreateCharacterScreen extends Screen {
                 }
             }
         }
-    }
-
-    private void renderStat(DrawContext context, int x, int y, String label, double value, double defaultValue, int color) {
-        String valueStr = String.format("%.1f", value);
-
-        String indicator = "";
-        if (value > defaultValue) {
-            indicator = " ▲";
-        } else if (value < defaultValue) {
-            indicator = " ▼";
-        }
-        context.drawTextWithShadow(this.textRenderer, Text.literal(label + ": ").withColor(COLOR_LABEL).append(Text.literal(valueStr + indicator).withColor(color)), x, y, COLOR_LABEL);
     }
 
     private void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {
@@ -400,8 +392,83 @@ public class CreateCharacterScreen extends Screen {
         switch (nameCheckState) {
             case CHECKING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.checking_name"), cx, y, COLOR_MUTED);
             case TAKEN -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.name_taken"), cx, y, COLOR_ERROR);
-            default -> {}
+            default -> {
+            }
         }
+    }
+
+    private List<AttributeIconInfo> resolveChangedAttributeIcons(CharacterClass characterClass) {
+        List<AttributeIconInfo> icons = new ArrayList<>();
+
+        for (Map.Entry<String, Double> entry : characterClass.getAttributes().entrySet()) {
+            Identifier attrId = Identifier.of(entry.getKey());
+            Optional<RegistryEntry.Reference<EntityAttribute>> registryEntry = Registries.ATTRIBUTE.getEntry(attrId);
+            if (registryEntry.isEmpty()) {
+                continue;
+            }
+
+            EntityAttribute attribute = registryEntry.get().value();
+            double defaultValue = attribute.getDefaultValue();
+            double value = entry.getValue();
+            if (Math.abs(value - defaultValue) < 0.0001) {
+                continue;
+            }
+
+            Identifier icon = GarbMain.identifierOf("textures/attribute/" + attrId.getPath() + "_icon.png");
+            Text label = Text.translatable(attribute.getTranslationKey());
+            icons.add(new AttributeIconInfo(icon, label, value, defaultValue));
+        }
+
+        return icons;
+    }
+
+    private String formatAttributeLabel(String path) {
+        String[] parts = path.split("_");
+        StringBuilder sb = new StringBuilder();
+        for (String part : parts) {
+            if (part.isEmpty()) continue;
+            if (!sb.isEmpty()) sb.append(' ');
+            sb.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return sb.toString();
+    }
+
+    private int renderAttributeIcons(DrawContext context, int startX, int startY, int maxWidth, List<AttributeIconInfo> icons, int mouseX, int mouseY) {
+        if (icons.isEmpty()) {
+            context.drawTextWithShadow(this.textRenderer, Text.literal("—"), startX, startY, COLOR_MUTED);
+            return startY + 12;
+        }
+
+        int rowHeight = ICON_RENDER_SIZE;
+        int x = startX;
+        int y = startY;
+
+        for (AttributeIconInfo info : icons) {
+            String valueStr = String.format("%.1f", info.value());
+            int textWidth = this.textRenderer.getWidth(valueStr);
+            int itemWidth = ICON_RENDER_SIZE + 4 + textWidth;
+
+            if (x != startX && x + itemWidth > startX + maxWidth) {
+                x = startX;
+                y += rowHeight + ICON_GAP;
+            }
+
+            boolean increase = info.value() > info.defaultValue();
+            int tintColor = increase ? 0x5A55FF55 : 0x5AFF5555;
+            context.fill(x - 1, y - 1, x + ICON_RENDER_SIZE + 1, y + ICON_RENDER_SIZE + 1, tintColor);
+            context.drawTexture(info.icon(), x, y, ICON_RENDER_SIZE, ICON_RENDER_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+
+            int textY = y + (ICON_RENDER_SIZE - this.textRenderer.fontHeight) / 2;
+            context.drawTextWithShadow(this.textRenderer, Text.literal(valueStr), x + ICON_RENDER_SIZE + 4, textY, COLOR_VALUE);
+
+            if (mouseX >= x && mouseX < x + itemWidth && mouseY >= y && mouseY < y + ICON_RENDER_SIZE) {
+                context.drawTooltip(this.textRenderer, info.label(), mouseX, mouseY);
+            }
+
+            x += itemWidth + ICON_GAP;
+        }
+
+        return y + rowHeight;
     }
 
     private List<String> wrapText(String text, int maxPixelWidth) {
