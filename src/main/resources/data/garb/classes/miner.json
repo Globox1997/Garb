@@ -1,0 +1,35 @@
+{
+  "id": "garb:miner",
+  "display_name": "Miner",
+  "icon": "garb:textures/class/miner.png",
+  "description": "A hardened underground explorer with powerful mining skills and extra durability.",
+  "attributes": {
+    "minecraft:generic.max_health": 24.0,
+    "minecraft:generic.attack_damage": 3.0,
+    "minecraft:generic.armor": 4.0,
+    "minecraft:generic.mining_efficiency": 0.25,
+    "minecraft:generic.oxygen_bonus": 5.0
+  },
+  "starting_items": [
+    {
+      "item": "minecraft:iron_pickaxe",
+      "count": 1
+    },
+    {
+      "item": "minecraft:stone_sword",
+      "count": 1
+    },
+    {
+      "item": "minecraft:iron_helmet",
+      "count": 1
+    },
+    {
+      "item": "minecraft:torch",
+      "count": 32
+    },
+    {
+      "item": "minecraft:bread",
+      "count": 8
+    }
+  ]
+}

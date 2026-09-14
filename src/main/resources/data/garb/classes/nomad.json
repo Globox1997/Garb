@@ -1,0 +1,36 @@
+{
+  "id": "garb:nomad",
+  "display_name": "Nomad",
+  "icon": "garb:textures/class/nomad.png",
+  "description": "A wandering survivor built for long journeys with speed, luck, and self-sufficiency.",
+  "attributes": {
+    "minecraft:generic.max_health": 22.0,
+    "minecraft:generic.attack_damage": 3.0,
+    "minecraft:generic.armor": 2.0,
+    "minecraft:generic.movement_speed": 0.11,
+    "minecraft:generic.luck": 2.0,
+    "minecraft:generic.oxygen_bonus": 10.0
+  },
+  "starting_items": [
+    {
+      "item": "minecraft:stone_sword",
+      "count": 1
+    },
+    {
+      "item": "minecraft:leather_boots",
+      "count": 1
+    },
+    {
+      "item": "minecraft:bread",
+      "count": 12
+    },
+    {
+      "item": "minecraft:torch",
+      "count": 16
+    },
+    {
+      "item": "minecraft:water_bucket",
+      "count": 1
+    }
+  ]
+}

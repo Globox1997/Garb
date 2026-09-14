@@ -1,0 +1,31 @@
+{
+  "id": "garb:warrior",
+  "display_name": "Warrior",
+  "icon": "garb:textures/class/warrior.png",
+  "description": "A tough melee fighter with high health, strong attacks, and heavy armor.",
+  "attributes": {
+    "minecraft:generic.max_health": 30.0,
+    "minecraft:generic.attack_damage": 4.0,
+    "minecraft:generic.armor": 6.0,
+    "minecraft:generic.armor_toughness": 2.0,
+    "minecraft:generic.knockback_resistance": 0.25
+  },
+  "starting_items": [
+    {
+      "item": "minecraft:iron_sword",
+      "count": 1
+    },
+    {
+      "item": "minecraft:iron_helmet",
+      "count": 1
+    },
+    {
+      "item": "minecraft:iron_chestplate",
+      "count": 1
+    },
+    {
+      "item": "minecraft:bread",
+      "count": 8
+    }
+  ]
+}

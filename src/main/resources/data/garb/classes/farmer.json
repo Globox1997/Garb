@@ -1,0 +1,38 @@
+{
+  "id": "garb:farmer",
+  "display_name": "Farmer",
+  "icon": "garb:textures/class/farmer.png",
+  "description": "A self-sufficient farmer with useful supplies and a talent for gathering resources.",
+  "attributes": {
+    "minecraft:generic.max_health": 22.0,
+    "minecraft:generic.attack_damage": 2.0,
+    "minecraft:generic.armor": 3.0,
+    "minecraft:generic.luck": 1.0
+  },
+  "starting_items": [
+    {
+      "item": "minecraft:stone_hoe",
+      "count": 1
+    },
+    {
+      "item": "minecraft:wooden_axe",
+      "count": 1
+    },
+    {
+      "item": "minecraft:wheat_seeds",
+      "count": 16
+    },
+    {
+      "item": "minecraft:carrot",
+      "count": 8
+    },
+    {
+      "item": "minecraft:potato",
+      "count": 8
+    },
+    {
+      "item": "minecraft:bread",
+      "count": 8
+    }
+  ]
+}
