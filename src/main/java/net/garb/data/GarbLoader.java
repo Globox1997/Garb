@@ -8,7 +8,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.garb.GarbMain;
 import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
-import net.garb.compat.GarbLevelZCompat;
+import net.garb.init.ConfigInit;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -25,6 +25,8 @@ public class GarbLoader implements SimpleSynchronousResourceReloadListener {
 
     public static final Logger LOGGER = LogManager.getLogger("Garb");
 
+    private static final List<String> DEFAULT = List.of("garb:archer", "garb:farmer", "garb:miner", "garb:nomad", "garb:warrior");
+
     @Override
     public Identifier getFabricId() {
         return GarbMain.identifierOf("garb_loader");
@@ -37,6 +39,10 @@ public class GarbLoader implements SimpleSynchronousResourceReloadListener {
         resourceManager.findResources("classes", id -> id.getPath().endsWith(".json")).forEach((id, resource) -> {
             try (InputStream stream = resource.getInputStream()) {
                 JsonObject json = JsonParser.parseReader(new InputStreamReader(stream)).getAsJsonObject();
+
+                if (!ConfigInit.CONFIG.defaultClasses && DEFAULT.contains(json.get("id").getAsString())) {
+                    return;
+                }
 
                 CharacterClass garbClass = parse(json);
                 CharacterClassRegistry.register(garbClass);

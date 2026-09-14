@@ -1,6 +1,7 @@
 package net.garb;
 
 import net.fabricmc.api.ModInitializer;
+import net.garb.init.ConfigInit;
 import net.garb.init.EventInit;
 import net.garb.init.LoaderInit;
 import net.garb.network.GarbServerPacket;
@@ -10,6 +11,7 @@ public class GarbMain implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        ConfigInit.init();
         GarbServerPacket.init();
         EventInit.init();
         LoaderInit.init();

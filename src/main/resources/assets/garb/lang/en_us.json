@@ -32,5 +32,8 @@
   "screen.garb.last_played.m_ago": "%s m ago",
   "screen.garb.last_played.just_now": "Just now",
 
-  "screen.garb.skill_presets": "Skill Presets"
+  "screen.garb.skill_presets": "Skill Presets",
+
+  "text.autoconfig.garb.title": "Garb",
+  "text.autoconfig.garb.option.defaultClasses": "Default Classes"
 }
