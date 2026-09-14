@@ -1,6 +1,8 @@
 package net.garb.util;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.garb.character.CharacterClass;
+import net.garb.compat.GarbLevelZCompat;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -13,6 +15,7 @@ public class ClassApplier {
     public static void applyToNewCharacter(ServerPlayerEntity player, CharacterClass characterClass) {
         applyAttributes(player, characterClass);
         giveStartingItems(player, characterClass);
+        applySkillPresets(player, characterClass);
     }
 
     public static void applyOnLogin(ServerPlayerEntity player, CharacterClass characterClass) {
@@ -38,6 +41,16 @@ public class ClassApplier {
             Item item = Registries.ITEM.get(Identifier.of(startItem.item()));
             player.getInventory().insertStack(new ItemStack(item, startItem.count()));
         }
+    }
+
+    private static void applySkillPresets(ServerPlayerEntity player, CharacterClass characterClass) {
+        if (characterClass.getSkillPresets().isEmpty()) {
+            return;
+        }
+        if (!FabricLoader.getInstance().isModLoaded("levelz")) {
+            return;
+        }
+        GarbLevelZCompat.applySkillPresets(player, characterClass.getSkillPresets());
     }
 
 }

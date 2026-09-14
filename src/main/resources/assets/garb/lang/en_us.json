@@ -22,7 +22,7 @@
   "screen.garb.starter_items": "Starter Items",
   "screen.garb.character_name_placeholder": "Character Name",
   "screen.garb.skin_username_placeholder": "Notch",
-  "screen.garb.no_classes_loaded": "No classes Lloaded",
+  "screen.garb.no_classes_loaded": "No classes Loaded",
   "screen.garb.name_required": "Name Required",
   "screen.garb.checking_name": "Checking Name",
   "screen.garb.name_taken": "Name Taken",
@@ -30,5 +30,7 @@
   "screen.garb.last_played.d_ago": "%s d ago",
   "screen.garb.last_played.h_ago": "%s h ago",
   "screen.garb.last_played.m_ago": "%s m ago",
-  "screen.garb.last_played.just_now": "Just now"
+  "screen.garb.last_played.just_now": "Just now",
+
+  "screen.garb.skill_presets": "Skill Presets"
 }

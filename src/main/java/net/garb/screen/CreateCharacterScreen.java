@@ -350,6 +350,8 @@ public class CreateCharacterScreen extends Screen {
                 }
             }
         }
+        textY += 4;
+        renderSkillPresets(context, textX, textY, this.height - PANEL_PADDING - 40, selected);
     }
 
     private void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {
@@ -414,7 +416,7 @@ public class CreateCharacterScreen extends Screen {
                 continue;
             }
 
-            Identifier icon = GarbMain.identifierOf("textures/attribute/" + attrId.getPath() + "_icon.png");
+            Identifier icon = GarbMain.identifierOf("textures/attribute/" + attrId.getPath() + ".png");
             Text label = Text.translatable(attribute.getTranslationKey());
             icons.add(new AttributeIconInfo(icon, label, value, defaultValue));
         }
@@ -422,15 +424,22 @@ public class CreateCharacterScreen extends Screen {
         return icons;
     }
 
-    private String formatAttributeLabel(String path) {
-        String[] parts = path.split("_");
-        StringBuilder sb = new StringBuilder();
-        for (String part : parts) {
-            if (part.isEmpty()) continue;
-            if (!sb.isEmpty()) sb.append(' ');
-            sb.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+    private void renderSkillPresets(DrawContext context, int textX, int textY, int maxY, CharacterClass selected) {
+        if (selected.getSkillPresets().isEmpty()) {
+            return;
         }
-        return sb.toString();
+
+        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skill_presets"), textX, textY, COLOR_LABEL);
+        textY += 12;
+
+        for (Map.Entry<String, Integer> entry : selected.getSkillPresets().entrySet()) {
+            Text skillName = Text.translatable("skill.levelz." + entry.getKey());
+            context.drawTextWithShadow(this.textRenderer, skillName.copy().append(" +" + entry.getValue()), textX, textY, COLOR_VALUE);
+            textY += 10;
+            if (textY > maxY) {
+                break;
+            }
+        }
     }
 
     private int renderAttributeIcons(DrawContext context, int startX, int startY, int maxWidth, List<AttributeIconInfo> icons, int mouseX, int mouseY) {

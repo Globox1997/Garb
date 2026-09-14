@@ -4,9 +4,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
+import net.fabricmc.loader.api.FabricLoader;
 import net.garb.GarbMain;
 import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
+import net.garb.compat.GarbLevelZCompat;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -80,6 +82,17 @@ public class GarbLoader implements SimpleSynchronousResourceReloadListener {
             }
         }
 
-        return new CharacterClass(id, displayName, icon, description, attributes, startingItems);
+        Map<String, Integer> skillPresets = new HashMap<>();
+        if (json.has("skills")) {
+            boolean levelZLoaded = FabricLoader.getInstance().isModLoaded("levelz");
+
+            if (levelZLoaded) {
+                for (Map.Entry<String, JsonElement> entry : json.getAsJsonObject("skills").entrySet()) {
+                    skillPresets.put(entry.getKey(), entry.getValue().getAsInt());
+                }
+            }
+        }
+
+        return new CharacterClass(id, displayName, icon, description, attributes, startingItems, skillPresets);
     }
 }
