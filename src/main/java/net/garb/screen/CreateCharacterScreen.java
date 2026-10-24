@@ -500,7 +500,7 @@ public class CreateCharacterScreen extends Screen {
                 break;
             }
             Text skillName = Text.translatable("skill.levelz." + entry.getKey());
-            context.drawTextWithShadow(this.textRenderer, skillName.copy().append(" +" + entry.getValue()), textX, textY, COLOR_VALUE);
+            context.drawTextWithShadow(this.textRenderer, Text.literal("+" + entry.getValue() + " ").append(skillName), textX, textY, COLOR_VALUE);
             textY += 10;
         }
     }
