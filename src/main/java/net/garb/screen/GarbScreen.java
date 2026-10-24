@@ -171,7 +171,7 @@ public class GarbScreen extends Screen {
 
         SlotSkin skin = index < this.slotSkins.size() ? this.slotSkins.get(index) : null;
         if (skin != null) {
-            PlayerModelRenderer.draw(context, skin.textureId(), skin.slim(), slot.armor(), x + CARD_WIDTH / 2, textY, CARD_MODEL_HEIGHT);
+            PlayerModelRenderer.draw(context, skin.textureId(), skin.slim(), slot.armor(), slot.backItem(), slot.beltItem(), x + CARD_WIDTH / 2, textY, CARD_MODEL_HEIGHT);
             textY += CARD_MODEL_HEIGHT + CARD_MODEL_GAP;
         } else {
             drawCenteredText(context, Text.literal("..."), x + CARD_WIDTH / 2, textY + 10, COLOR_EMPTY_TEXT);

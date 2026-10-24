@@ -18,8 +18,13 @@ public class CharacterData {
     public record WornArmor(String itemId, int color, boolean glint) {
     }
 
+    public record CarriedItem(String itemId, boolean glint) {
+    }
+
     private static final int ARMOR_SLOT_START = 100;
     private static final int ARMOR_SLOT_END = 103;
+    private static final int BACK_SLOT = 110;
+    private static final int BELT_SLOT = 111;
     private static final int DEFAULT_DYE_COLOR = -6265536;
 
     private String name;
@@ -153,6 +158,31 @@ public class CharacterData {
             armor.add(new WornArmor(Registries.ITEM.getId(stack.getItem()).toString(), color, stack.hasGlint()));
         }
         return armor;
+    }
+
+    public CarriedItem getBackSlotItem(RegistryWrapper.WrapperLookup registries) {
+        return getCarriedItem(registries, BACK_SLOT);
+    }
+
+    public CarriedItem getBeltSlotItem(RegistryWrapper.WrapperLookup registries) {
+        return getCarriedItem(registries, BELT_SLOT);
+    }
+
+    private CarriedItem getCarriedItem(RegistryWrapper.WrapperLookup registries, int inventorySlot) {
+        if (playerNbt == null) return null;
+        NbtList inventory = playerNbt.getList("Inventory", NbtElement.COMPOUND_TYPE);
+        for (int i = 0; i < inventory.size(); i++) {
+            NbtCompound entry = inventory.getCompound(i);
+            if ((entry.getByte("Slot") & 255) != inventorySlot) {
+                continue;
+            }
+            ItemStack stack = ItemStack.fromNbtOrEmpty(registries, entry);
+            if (stack.isEmpty()) {
+                return null;
+            }
+            return new CarriedItem(Registries.ITEM.getId(stack.getItem()).toString(), stack.hasGlint());
+        }
+        return null;
     }
 
     public int getFoodLevel() {

@@ -16,7 +16,7 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
 
     public static final PacketCodec<PacketByteBuf, S2CCharacterDataPacket> CODEC = PacketCodec.of(S2CCharacterDataPacket::write, S2CCharacterDataPacket::read);
 
-    public record SlotInfo(boolean exists, String name, String skinUsername, long lastPlayed, float health, float maxHealth, int foodLevel, int xpLevel, List<CharacterData.WornArmor> armor) {
+    public record SlotInfo(boolean exists, String name, String skinUsername, long lastPlayed, float health, float maxHealth, int foodLevel, int xpLevel, List<CharacterData.WornArmor> armor, CharacterData.CarriedItem backItem, CharacterData.CarriedItem beltItem) {
     }
 
 
@@ -38,6 +38,8 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
                 buf.writeInt(armor.color());
                 buf.writeBoolean(armor.glint());
             }
+            writeCarriedItem(buf, slot.backItem());
+            writeCarriedItem(buf, slot.beltItem());
         }
     }
 
@@ -59,9 +61,26 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
             for (int j = 0; j < armorCount; j++) {
                 armor.add(new CharacterData.WornArmor(buf.readString(), buf.readInt(), buf.readBoolean()));
             }
-            slots.add(new SlotInfo(exists, name, skinUsername, lastPlayed, health, maxHealth, foodLevel, xpLevel, armor));
+            CharacterData.CarriedItem backItem = readCarriedItem(buf);
+            CharacterData.CarriedItem beltItem = readCarriedItem(buf);
+            slots.add(new SlotInfo(exists, name, skinUsername, lastPlayed, health, maxHealth, foodLevel, xpLevel, armor, backItem, beltItem));
         }
         return new S2CCharacterDataPacket(slots, errorKey);
+    }
+
+    private static void writeCarriedItem(PacketByteBuf buf, CharacterData.CarriedItem item) {
+        buf.writeBoolean(item != null);
+        if (item != null) {
+            buf.writeString(item.itemId());
+            buf.writeBoolean(item.glint());
+        }
+    }
+
+    private static CharacterData.CarriedItem readCarriedItem(PacketByteBuf buf) {
+        if (!buf.readBoolean()) {
+            return null;
+        }
+        return new CharacterData.CarriedItem(buf.readString(), buf.readBoolean());
     }
 
     public static S2CCharacterDataPacket from(CharacterData[] dataSlots, RegistryWrapper.WrapperLookup registries) {
@@ -71,7 +90,7 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
     public static S2CCharacterDataPacket from(CharacterData[] dataSlots, String errorKey, RegistryWrapper.WrapperLookup registries) {
         List<SlotInfo> slots = new ArrayList<>();
         for (CharacterData data : dataSlots) {
-            slots.add(new SlotInfo(data.exists(), data.getName(), data.getSkinUsername(), data.getLastPlayed(), data.getHealth(), data.getMaxHealth(), data.getFoodLevel(), data.getExperienceLevel(), data.getWornArmor(registries)));
+            slots.add(new SlotInfo(data.exists(), data.getName(), data.getSkinUsername(), data.getLastPlayed(), data.getHealth(), data.getMaxHealth(), data.getFoodLevel(), data.getExperienceLevel(), data.getWornArmor(registries), data.getBackSlotItem(registries), data.getBeltSlotItem(registries)));
         }
         return new S2CCharacterDataPacket(slots, errorKey);
     }
