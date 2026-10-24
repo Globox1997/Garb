@@ -8,6 +8,7 @@ import net.garb.network.packet.S2CCharacterDataPacket;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -30,28 +31,32 @@ public class GarbScreen extends Screen {
     private static final int CARD_GAP = 16;
     private static final int BUTTON_HEIGHT = 20;
     private static final int CARD_PADDING = 10;
+    private static final int EXIT_BUTTON_SIZE = 20;
+    private static final int EXIT_BUTTON_MARGIN = 6;
 
-    private static final int COLOR_CARD_BG = 0xCC1A1A1A;
+    private static final Identifier CHARACTER_SLOT_TEXTURE = GarbMain.identifierOf("textures/gui/character_slot.png");
+
     private static final int COLOR_CARD_BORDER = 0xFF555555;
-    private static final int COLOR_CARD_HOVER = 0xCC2A2A2A;
-    private static final int COLOR_EMPTY_TEXT = 0xFF888888;
+    private static final int COLOR_CARD_HOVER = 0x30FFFFFF;
+    private static final int COLOR_EMPTY_TEXT = 0xFF707070;
     private static final int COLOR_TITLE = 0xFFFFFFFF;
-    private static final int COLOR_LABEL = 0xFFAAAAAA;
-    private static final int COLOR_VALUE = 0xFFFFFFFF;
-    private static final int COLOR_HP = 0xFFFF5555;
-    private static final int COLOR_HUNGER = 0xFFFFAA55;
-    private static final int COLOR_XP = 0xFF55FF55;
+    private static final int COLOR_CARD_TEXT = 0xFF404040;
+    private static final int COLOR_LABEL = 0xFF606060;
+    private static final int COLOR_HP = 0xFFAA0000;
+    private static final int COLOR_HUNGER = 0xFFAA5500;
+    private static final int COLOR_XP = 0xFF00AA00;
 
-    private static final Identifier ICON_HEALTH = GarbMain.identifierOf("textures/class/health_icon.png");
-    private static final Identifier ICON_HUNGER = GarbMain.identifierOf("textures/class/hunger_icon.png");
-    private static final Identifier ICON_XP = GarbMain.identifierOf("textures/class/xp_icon.png");
+    private static final Identifier ICON_HEALTH = GarbMain.identifierOf("textures/attribute/generic.max_health.png");
+    private static final Identifier ICON_HUNGER = GarbMain.identifierOf("textures/attribute/generic.hunger.png");
+    private static final Identifier ICON_XP = Identifier.ofVanilla("textures/entity/experience_orb.png");
     private static final int ICON_SIZE = 9;
 
     private int hoveredSlot = -1;
 
     private final Consumer<C2SSelectCharacterPacket> selectCallback;
+    private final Runnable exitCallback;
 
-    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, Consumer<C2SSelectCharacterPacket> selectCallback) {
+    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, Consumer<C2SSelectCharacterPacket> selectCallback, Runnable exitCallback) {
         super(Text.translatable("screen.garb.title"));
         this.slots = slots;
         this.slotSkins = new ArrayList<>();
@@ -59,6 +64,7 @@ public class GarbScreen extends Screen {
             this.slotSkins.add(null);
         }
         this.selectCallback = selectCallback;
+        this.exitCallback = exitCallback;
     }
 
     @Override
@@ -78,7 +84,7 @@ public class GarbScreen extends Screen {
             final int index = i;
             S2CCharacterDataPacket.SlotInfo slot = slots.get(i);
 
-            if (slot.exists() && slot.skinUsername() != null && !slot.skinUsername().isEmpty()) {
+            if (this.slotSkins.get(index) == null && slot.exists() && slot.skinUsername() != null && !slot.skinUsername().isEmpty()) {
                 SkinLoader.loadForUsername(slot.skinUsername(), result -> {
                     if (result.success()) {
                         this.slotSkins.set(index, new SlotSkin(result.textureId(), result.slim()));
@@ -104,6 +110,11 @@ public class GarbScreen extends Screen {
                 }
             }).position(cardX, buttonY).size(CARD_WIDTH, BUTTON_HEIGHT).build());
         }
+
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("screen.garb.exit"), btn -> exitCallback.run())
+                .tooltip(Tooltip.of(Text.translatable("menu.disconnect")))
+                .position(this.width - EXIT_BUTTON_SIZE - EXIT_BUTTON_MARGIN, EXIT_BUTTON_MARGIN)
+                .size(EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE).build());
     }
 
     @Override
@@ -127,17 +138,16 @@ public class GarbScreen extends Screen {
 
     private void drawCard(DrawContext context, S2CCharacterDataPacket.SlotInfo slot, int index, int x, int y, boolean hovered) {
 
-        int bgColor = hovered ? COLOR_CARD_HOVER : COLOR_CARD_BG;
-
-        context.fill(x, y, x + CARD_WIDTH, y + CARD_HEIGHT, bgColor);
-
-        context.drawBorder(x, y, CARD_WIDTH, CARD_HEIGHT, COLOR_CARD_BORDER);
+        context.drawTexture(CHARACTER_SLOT_TEXTURE, x, y, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+        if (hovered) {
+            context.fill(x + 1, y + 1, x + CARD_WIDTH - 2, y + CARD_HEIGHT - 2, COLOR_CARD_HOVER);
+        }
 
         int textX = x + CARD_PADDING;
         int textY = y + CARD_PADDING;
         int lineHeight = 12;
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.slot", index + 1), textX, textY, COLOR_TITLE);
+        context.drawText(this.textRenderer, Text.translatable("screen.garb.slot", index + 1), textX, textY, COLOR_CARD_TEXT, false);
         textY += lineHeight + 4;
 
         context.fill(x + CARD_PADDING, textY, x + CARD_WIDTH - CARD_PADDING, textY + 1, COLOR_CARD_BORDER);
@@ -145,12 +155,13 @@ public class GarbScreen extends Screen {
 
         if (!slot.exists()) {
             int emptyY = y + CARD_HEIGHT / 2 - 10;
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.empty"), x + CARD_WIDTH / 2, emptyY, COLOR_EMPTY_TEXT);
+            drawCenteredText(context, Text.translatable("screen.garb.empty"), x + CARD_WIDTH / 2, emptyY, COLOR_EMPTY_TEXT);
             return;
         }
 
         if (slot.name() != null && !slot.name().isEmpty()) {
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(slot.name()), x + CARD_WIDTH / 2, textY - 10, COLOR_TITLE);
+            drawCenteredText(context, Text.literal(slot.name()), x + CARD_WIDTH / 2, textY, COLOR_CARD_TEXT);
+            textY += lineHeight;
         }
 
         SlotSkin skin = index < this.slotSkins.size() ? this.slotSkins.get(index) : null;
@@ -161,21 +172,25 @@ public class GarbScreen extends Screen {
             drawPlayer(context, skin.textureId(), skin.slim(), playerX, textY, scale);
             textY += scale * 8 + 6;
         } else {
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("..."), x + CARD_WIDTH / 2, textY + 10, COLOR_EMPTY_TEXT);
+            drawCenteredText(context, Text.literal("..."), x + CARD_WIDTH / 2, textY + 10, COLOR_EMPTY_TEXT);
             textY += 26;
         }
 
-        drawIconStat(context, ICON_HEALTH, String.format("%.1f / 20.0", slot.health()), textX, textY, COLOR_HP);
-        textY += lineHeight + 4;
+        drawIconStat(context, ICON_HEALTH, Text.literal(String.format("%.1f / 20.0", slot.health())), textX, textY, COLOR_HP);
+        textY += lineHeight + 2;
 
-        drawIconStat(context, ICON_HUNGER, slot.foodLevel() + " / 20", textX, textY, COLOR_HUNGER);
-        textY += lineHeight + 4;
+        drawIconStat(context, ICON_HUNGER, Text.literal(slot.foodLevel() + " / 20"), textX, textY, COLOR_HUNGER);
+        textY += lineHeight + 2;
 
-        drawIconStat(context, ICON_XP, "Level " + slot.xpLevel(), textX, textY, COLOR_XP);
-        textY += lineHeight + 4;
+        drawIconStat(context, ICON_XP, Text.translatable("screen.garb.level", slot.xpLevel()), textX, textY, COLOR_XP);
+        textY += lineHeight + 2;
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.last_played"), textX, textY, COLOR_LABEL);
-        context.drawTextWithShadow(this.textRenderer, formatLastPlayed(slot.lastPlayed()), textX, textY + lineHeight, COLOR_VALUE);
+        context.drawText(this.textRenderer, Text.translatable("screen.garb.last_played"), textX, textY, COLOR_LABEL, false);
+        context.drawText(this.textRenderer, formatLastPlayed(slot.lastPlayed()), textX, textY + lineHeight, COLOR_CARD_TEXT, false);
+    }
+
+    private void drawCenteredText(DrawContext context, Text text, int centerX, int y, int color) {
+        context.drawText(this.textRenderer, text, centerX - this.textRenderer.getWidth(text) / 2, y, color, false);
     }
 
     private boolean isMouseOverCard(int mouseX, int mouseY, int cardX, int cardY) {
@@ -221,10 +236,16 @@ public class GarbScreen extends Screen {
         context.drawTexture(texture, x, y, width, height, u, v, regionW, regionH, 64, 64);
     }
 
-    private void drawIconStat(DrawContext context, Identifier icon, String valueText, int x, int y, int color) {
-        context.drawTexture(icon, x, y, ICON_SIZE, ICON_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+    private void drawIconStat(DrawContext context, Identifier icon, Text valueText, int x, int y, int color) {
+        if (icon.equals(ICON_XP)) {
+            context.setShaderColor(0.5f, 1.0f, 0.2f, 1.0f);
+            context.drawTexture(icon, x, y, ICON_SIZE, ICON_SIZE, 32, 32, 16, 16, 64, 64);
+            context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        } else {
+            context.drawTexture(icon, x, y, ICON_SIZE, ICON_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+        }
         int textY = y + (ICON_SIZE - this.textRenderer.fontHeight) / 2;
-        context.drawTextWithShadow(this.textRenderer, Text.literal(valueText), x + ICON_SIZE + 4, textY, color);
+        context.drawText(this.textRenderer, valueText, x + ICON_SIZE + 4, textY, color, false);
     }
 
 }

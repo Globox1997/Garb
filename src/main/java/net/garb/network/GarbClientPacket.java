@@ -11,6 +11,7 @@ import net.garb.screen.GarbScreen;
 import net.garb.util.ClientCharacterCache;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.util.SkinTextures;
+import net.minecraft.text.Text;
 
 import java.util.function.Consumer;
 
@@ -21,7 +22,8 @@ public class GarbClientPacket {
         ClientConfigurationNetworking.registerGlobalReceiver(S2CCharacterDataPacket.ID, (packet, context) -> {
             context.client().execute(() -> {
                 Consumer<C2SSelectCharacterPacket> onSelect = ClientConfigurationNetworking::send;
-                context.client().setScreen(new GarbScreen(packet.slots(), onSelect));
+                Runnable onExit = () -> context.responseSender().disconnect(Text.translatable("disconnect.quitting"));
+                context.client().setScreen(new GarbScreen(packet.slots(), onSelect, onExit));
             });
         });
         ClientConfigurationNetworking.registerGlobalReceiver(S2CClassDataPacket.ID, (packet, context) -> {

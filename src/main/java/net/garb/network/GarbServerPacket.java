@@ -67,7 +67,7 @@ public class GarbServerPacket {
 //        }
 
         for (ServerPlayerEntity other : player.getServer().getPlayerManager().getPlayerList()) {
-            ServerPlayNetworking.send(player, selfPacket);
+            ServerPlayNetworking.send(other, selfPacket);
 
             if (other == player) {
                 continue;

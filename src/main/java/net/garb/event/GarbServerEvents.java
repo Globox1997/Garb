@@ -2,6 +2,7 @@ package net.garb.event;
 
 import net.garb.character.CharacterData;
 import net.garb.character.CharacterSaveManager;
+import net.garb.character.GarbActiveCharacterCache;
 import net.garb.character.GarbPlayerManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
@@ -10,9 +11,11 @@ import net.minecraft.server.network.ServerPlayerEntity;
 public class GarbServerEvents {
 
     public static void onPlayerDisconnect(ServerPlayNetworkHandler context, MinecraftServer server) {
-        server.execute(() -> {
+        if (server.isOnThread()) {
             saveCurrentCharacter(context.getPlayer(), server);
-        });
+        } else {
+            server.execute(() -> saveCurrentCharacter(context.getPlayer(), server));
+        }
     }
 
     public static void onPlayerDeath(ServerPlayerEntity player) {
@@ -42,6 +45,8 @@ public class GarbServerEvents {
 
         data.captureFromPlayer(player);
         CharacterSaveManager.save(server, player.getUuid(), slot, data);
+
+        GarbActiveCharacterCache.clear(player.getUuid());
     }
 
 }

@@ -61,20 +61,38 @@ public class CreateCharacterScreen extends Screen {
     private static final int PANEL_PADDING = 16;
 
     private static final int COLOR_TITLE = 0xFFFFFFFF;
-    private static final int COLOR_LABEL = 0xFFAAAAAA;
+    private static final int COLOR_LABEL = 0xFFFFFFFF;
     private static final int COLOR_VALUE = 0xFFFFFFFF;
     private static final int COLOR_ERROR = 0xFFFF5555;
     private static final int COLOR_MUTED = 0xFF666666;
-    private static final int COLOR_PANEL_BG = 0xCC1A1A1A;
     private static final int COLOR_BORDER = 0xFF555555;
-    private static final int COLOR_HP = 0xFFFF5555;
-    private static final int COLOR_SPEED = 0xFF55FFFF;
-    private static final int COLOR_DMG = 0xFFFFAA55;
-    private static final int COLOR_ARMOR = 0xFFAAAAFF;
 
     private static final int ICON_SIZE = 9;
-    private static final int ICON_RENDER_SIZE = 16;
+    private static final int ICON_RENDER_SIZE = 9;
     private static final int ICON_GAP = 4;
+
+    private static final Identifier CLASS_BACKGROUND_TEXTURE = GarbMain.identifierOf("textures/gui/class_background.png");
+    private static final int CLASS_BG_WIDTH = 148;
+    private static final int CLASS_BG_HEIGHT = 195;
+    private static final int CLASS_ICON_SIZE = 32;
+    private static final int CLASS_ICON_FRAME_SIZE = 42;
+    private static final int PANEL_EDGE = 4;
+    private static final int CLASS_ARROW_SIZE = 20;
+    private static final int CLASS_ARROW_GAP = 2;
+    private static final int PANEL_GAP = 6;
+    private static final int PANEL_INNER_PADDING = 8;
+    private static final int TITLE_AREA = 32;
+    private static final int BOTTOM_AREA = PANEL_PADDING + 20 + 8;
+
+    private int panelY;
+    private int panelY2;
+    private int classBgX;
+    private int leftPanelX1;
+    private int leftPanelX2;
+    private int rightPanelX1;
+    private int rightPanelX2;
+    private static final int COLOR_CLASS_TEXT = 0xFF404040;
+    private static final int COLOR_CLASS_MUTED = 0xFF606060;
 
     public CreateCharacterScreen(Screen parent, Consumer<CreationResult> onCreate) {
         super(Text.translatable("screen.garb.create_character"));
@@ -88,19 +106,19 @@ public class CreateCharacterScreen extends Screen {
         this.classes = new ArrayList<>(CharacterClassRegistry.getAll());
 
         int cx = this.width / 2;
-        int cy = this.height / 2;
+        updateLayout();
 
-        int fieldX = PANEL_PADDING;
-        int fieldW = (this.width / 3) - PANEL_PADDING * 2;
+        int fieldX = leftPanelX1 + PANEL_INNER_PADDING;
+        int fieldW = leftPanelX2 - leftPanelX1 - PANEL_INNER_PADDING * 2;
 
-        characterNameField = new TextFieldWidget(this.textRenderer, fieldX, cy - 60, fieldW, 20, Text.translatable("screen.garb.name"));
+        characterNameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + 34, fieldW, 20, Text.translatable("screen.garb.name"));
         characterNameField.setMaxLength(32);
         characterNameField.setPlaceholder(Text.translatable("screen.garb.character_name_placeholder"));
         characterNameField.setChangedListener(this::onCharacterNameChanged);
         characterNameField.setFocused(true);
         this.addSelectableChild(characterNameField);
 
-        skinUsernameField = new TextFieldWidget(this.textRenderer, fieldX, cy - 20, fieldW, 20, Text.translatable("screen.garb.skin_username"));
+        skinUsernameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + 70, fieldW, 20, Text.translatable("screen.garb.skin_username"));
         skinUsernameField.setMaxLength(32);
         skinUsernameField.setPlaceholder(Text.translatable("screen.garb.skin_username_placeholder"));
         skinUsernameField.setChangedListener(this::onSkinUsernameChanged);
@@ -110,12 +128,11 @@ public class CreateCharacterScreen extends Screen {
             skinUsernameField.setText(this.client.getSession().getUsername());
         }
 
-        int classPanelCx = cx;
-        int arrowY = cy + 60;
+        int arrowY = panelY + (CLASS_BG_HEIGHT - CLASS_ARROW_SIZE) / 2;
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("◀"), btn -> cycleClass(-1)).position(classPanelCx - 90, arrowY).size(20, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("◀"), btn -> cycleClass(-1)).position(classBgX - CLASS_ARROW_GAP - CLASS_ARROW_SIZE, arrowY).size(CLASS_ARROW_SIZE, CLASS_ARROW_SIZE).build());
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("▶"), btn -> cycleClass(+1)).position(classPanelCx + 70, arrowY).size(20, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("▶"), btn -> cycleClass(+1)).position(classBgX + CLASS_BG_WIDTH + CLASS_ARROW_GAP, arrowY).size(CLASS_ARROW_SIZE, CLASS_ARROW_SIZE).build());
 
         int btnY = this.height - PANEL_PADDING - 20;
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("screen.garb.confirm"), btn -> confirm()).position(cx - 102, btnY).size(100, 20).build());
@@ -197,6 +214,11 @@ public class CreateCharacterScreen extends Screen {
     }
 
     @Override
+    public void close() {
+        this.client.setScreen(parent);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 257) {
             confirm();
@@ -209,52 +231,69 @@ public class CreateCharacterScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
 
-        int panelW = this.width / 3;
-        int cy = this.height / 2;
+        renderLeftPanel(context);
 
-        renderLeftPanel(context, panelW, cy);
+        renderMiddlePanel(context);
 
-        renderMiddlePanel(context, panelW, cy);
-
-        renderRightPanel(context, panelW, cy, mouseX, mouseY);
+        renderRightPanel(context, mouseX, mouseY);
 
         context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.create_character"), this.width / 2, PANEL_PADDING, COLOR_TITLE);
     }
 
-    private void renderLeftPanel(DrawContext context, int panelW, int cy) {
-        int x = PANEL_PADDING;
-        int panelX = panelW + PANEL_PADDING;
-        int panelX2 = panelW - PANEL_PADDING;
+    private void updateLayout() {
+        int available = this.height - TITLE_AREA - BOTTOM_AREA;
+        int panelHeight = Math.min(CLASS_BG_HEIGHT, available);
+        panelY = TITLE_AREA + Math.max(0, (available - panelHeight) / 2);
+        panelY2 = panelY + panelHeight;
 
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.character"), (panelW / 2), PANEL_PADDING + 24, COLOR_TITLE);
+        classBgX = this.width / 2 - CLASS_BG_WIDTH / 2;
 
-        context.fill(x - 4, PANEL_PADDING + 16, panelX2 + 4, this.height - PANEL_PADDING - 28, COLOR_PANEL_BG);
-        context.drawBorder(x - 4, PANEL_PADDING + 16, panelX2 - x + 8, this.height - PANEL_PADDING * 2 - 44, COLOR_BORDER);
+        leftPanelX2 = classBgX - CLASS_ARROW_GAP - CLASS_ARROW_SIZE - PANEL_GAP;
+        leftPanelX1 = Math.max(PANEL_INNER_PADDING, leftPanelX2 - CLASS_BG_WIDTH);
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.name"), x, cy - 74, COLOR_LABEL);
+        rightPanelX1 = classBgX + CLASS_BG_WIDTH + CLASS_ARROW_GAP + CLASS_ARROW_SIZE + PANEL_GAP;
+        rightPanelX2 = Math.min(this.width - PANEL_INNER_PADDING, rightPanelX1 + CLASS_BG_WIDTH);
+    }
+
+    private void drawPanel(DrawContext context, int x, int y, int width, int height) {
+        int w = Math.min(width, CLASS_BG_WIDTH);
+        int h = Math.min(height, CLASS_BG_HEIGHT);
+        int edge = PANEL_EDGE;
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, x, y, 0, 0, w - edge, h - edge);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, x + w - edge, y, CLASS_BG_WIDTH - edge, 0, edge, h - edge);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, x, y + h - edge, 0, CLASS_BG_HEIGHT - edge, w - edge, edge);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, x + w - edge, y + h - edge, CLASS_BG_WIDTH - edge, CLASS_BG_HEIGHT - edge, edge, edge);
+    }
+
+    private void renderLeftPanel(DrawContext context) {
+        int panelW = leftPanelX2 - leftPanelX1;
+        int panelCx = leftPanelX1 + panelW / 2;
+        int x = leftPanelX1 + PANEL_INNER_PADDING;
+
+        drawPanel(context, leftPanelX1, panelY, panelW, panelY2 - panelY);
+
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, panelCx-25, panelY+111, 148, 55, 50, 62);
+
+        context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.character"), panelCx, panelY + 8, COLOR_TITLE);
+
+        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.name"), x, panelY + 24, COLOR_LABEL);
         characterNameField.render(context, 0, 0, 0);
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_username"), x, cy - 34, COLOR_LABEL);
+        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_username"), x, panelY + 60, COLOR_LABEL);
         skinUsernameField.render(context, 0, 0, 0);
 
-        int previewCx = x + (panelW - PANEL_PADDING * 2) / 2;
-        renderNameCheckStatus(context, previewCx, cy + 6);
+        renderNameCheckStatus(context, panelCx, panelY + 24);
 
-        int previewY = cy + 20;
-        renderSkinPreview(context, previewCx, previewY);
+        renderSkinPreview(context, panelCx, panelY + 118);
     }
 
     private void renderSkinPreview(DrawContext context, int cx, int y) {
         switch (skinLoadState) {
-            case IDLE -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_preview_hint"), cx, y, COLOR_MUTED);
+            case IDLE -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_preview_hint"), cx, y-22, COLOR_MUTED);
 
-            case LOADING -> {
-                int dots = (int) ((System.currentTimeMillis() / 400) % 4);
-                String label = "Loading" + ".".repeat(dots);
-                context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(label), cx, y, COLOR_LABEL);
-            }
+            case LOADING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_loading"), cx, y-22, COLOR_LABEL);
 
-            case ERROR -> context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(skinErrorMessage), cx, y, COLOR_ERROR);
+            case ERROR -> context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(skinErrorMessage), cx, y-22, COLOR_ERROR);
 
             case SUCCESS -> {
                 if (loadedSkinTexture != null) {
@@ -266,92 +305,98 @@ public class CreateCharacterScreen extends Screen {
         }
     }
 
-    private void renderMiddlePanel(DrawContext context, int panelW, int cy) {
-        int panelX = panelW + PANEL_PADDING;
-        int panelX2 = panelW * 2 - PANEL_PADDING;
-        int panelCx = (panelX + panelX2) / 2;
+    private void drawCenteredText(DrawContext context, Text text, int centerX, int y, int color) {
+        context.drawText(this.textRenderer, text, centerX - this.textRenderer.getWidth(text) / 2, y, color, false);
+    }
 
-        context.fill(panelX - 4, PANEL_PADDING + 16, panelX2 + 4, this.height - PANEL_PADDING - 28, COLOR_PANEL_BG);
-        context.drawBorder(panelX - 4, PANEL_PADDING + 16, panelX2 - panelX + 8, this.height - PANEL_PADDING * 2 - 44, COLOR_BORDER);
+    private void renderMiddlePanel(DrawContext context) {
+        int panelCx = classBgX + CLASS_BG_WIDTH / 2;
+        int bgY = panelY;
 
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.choose_class"), panelCx, PANEL_PADDING + 24, COLOR_TITLE);
+        drawPanel(context, classBgX, bgY, CLASS_BG_WIDTH, panelY2 - panelY);
+
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, panelCx - CLASS_ICON_FRAME_SIZE / 2, bgY + 19, CLASS_BG_WIDTH, 0, CLASS_ICON_FRAME_SIZE, CLASS_ICON_FRAME_SIZE);
+
+        context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.choose_class"), panelCx, bgY + 8, COLOR_TITLE);
 
         if (classes.isEmpty()) {
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.no_classes_loaded"), panelCx, cy, COLOR_MUTED);
+            drawCenteredText(context, Text.translatable("screen.garb.no_classes_loaded"), panelCx, (bgY + panelY2) / 2, COLOR_CLASS_MUTED);
             return;
         }
 
         CharacterClass selected = classes.get(selectedClassIndex);
 
-        int iconY = PANEL_PADDING + 40;
-        int iconSize = 32;
+        int iconY = bgY + 19 + (CLASS_ICON_FRAME_SIZE - CLASS_ICON_SIZE) / 2;
         if (selected.getIcon() != null) {
-            context.drawTexture(selected.getIcon(), panelCx - iconSize / 2, iconY, iconSize, iconSize, 0, 0, 16, 16, 16, 16);
+            context.drawTexture(selected.getIcon(), panelCx - CLASS_ICON_SIZE / 2, iconY, CLASS_ICON_SIZE, CLASS_ICON_SIZE, 0, 0, 16, 16, 16, 16);
         } else {
-            context.drawBorder(panelCx - iconSize / 2, iconY, iconSize, iconSize, COLOR_BORDER);
-            context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("?"), panelCx, iconY + 12, COLOR_MUTED);
+            drawCenteredText(context, Text.literal("?"), panelCx, iconY + 12, COLOR_CLASS_MUTED);
         }
 
-        int textY = iconY + iconSize + 8;
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(selected.getDisplayName()), panelCx, textY, COLOR_TITLE);
-        textY += 14;
+        int textY = bgY + 19 + CLASS_ICON_FRAME_SIZE + 6;
+        drawCenteredText(context, Text.literal(selected.getDisplayName()), panelCx, textY, COLOR_CLASS_TEXT);
+        textY += 12;
 
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.literal((selectedClassIndex + 1) + " / " + classes.size()), panelCx, textY, COLOR_MUTED);
-        textY += 14;
+        drawCenteredText(context, Text.literal((selectedClassIndex + 1) + " / " + classes.size()), panelCx, textY, COLOR_CLASS_MUTED);
+        textY += 12;
 
-        context.fill(panelX + 8, textY, panelX2 - 8, textY + 1, COLOR_BORDER);
+        context.fill(classBgX + 8, textY, classBgX + CLASS_BG_WIDTH - 8, textY + 1, COLOR_BORDER);
         textY += 6;
 
         if (selected.getDescription() != null && !selected.getDescription().isEmpty()) {
-            for (String line : wrapText(selected.getDescription(), panelX2 - panelX - 16)) {
-                context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(line), panelCx, textY, COLOR_LABEL);
+            int maxY = panelY2 - 8 - this.textRenderer.fontHeight;
+            for (String line : wrapText(selected.getDescription(), CLASS_BG_WIDTH - 16)) {
+                if (textY > maxY) {
+                    break;
+                }
+                drawCenteredText(context, Text.literal(line), panelCx, textY, COLOR_CLASS_MUTED);
                 textY += 10;
             }
         }
     }
 
-    private void renderRightPanel(DrawContext context, int panelW, int cy, int mouseX, int mouseY) {
-        int panelX = panelW * 2 + PANEL_PADDING;
-        int panelX2 = this.width - PANEL_PADDING;
-        int panelCx = (panelX + panelX2) / 2;
-        int textX = panelX + 8;
+    private void renderRightPanel(DrawContext context, int mouseX, int mouseY) {
+        int panelW = rightPanelX2 - rightPanelX1;
+        int panelCx = rightPanelX1 + panelW / 2;
+        int textX = rightPanelX1 + PANEL_INNER_PADDING;
+        int maxY = panelY2 - 8 - this.textRenderer.fontHeight;
 
-        context.fill(panelX - 4, PANEL_PADDING + 16, panelX2 + 4, this.height - PANEL_PADDING - 28, COLOR_PANEL_BG);
-        context.drawBorder(panelX - 4, PANEL_PADDING + 16, panelX2 - panelX + 8, this.height - PANEL_PADDING * 2 - 44, COLOR_BORDER);
+        drawPanel(context, rightPanelX1, panelY, panelW, panelY2 - panelY);
 
-        context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.class_stats"), panelCx, PANEL_PADDING + 24, COLOR_TITLE);
+        context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.class_stats"), panelCx, panelY + 8, COLOR_TITLE);
 
         if (classes.isEmpty()) {
             return;
         }
         CharacterClass selected = classes.get(selectedClassIndex);
-        int textY = PANEL_PADDING + 40;
+        int textY = panelY + 24;
 
         List<AttributeIconInfo> attributeIcons = resolveChangedAttributeIcons(selected);
-        textY = renderAttributeIcons(context, textX, textY, panelX2 - textX - 8, attributeIcons, mouseX, mouseY);
-        textY += 8;
+        textY = renderAttributeIcons(context, textX, textY, panelW - PANEL_INNER_PADDING * 2, attributeIcons, mouseX, mouseY);
+        textY += 6;
 
-        context.fill(panelX + 8, textY, panelX2 - 8, textY + 1, COLOR_BORDER);
-        textY += 8;
+        context.fill(rightPanelX1 + PANEL_INNER_PADDING, textY, rightPanelX2 - PANEL_INNER_PADDING, textY + 1, COLOR_BORDER);
+        textY += 6;
 
         context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.starter_items"), textX, textY, COLOR_LABEL);
-        textY += 14;
+        textY += 12;
 
         if (selected.getStartingItems().isEmpty()) {
             context.drawTextWithShadow(this.textRenderer, Text.literal("—"), textX, textY, COLOR_MUTED);
+            textY += 10;
         } else {
             for (CharacterClass.StartItem item : selected.getStartingItems()) {
+                if (textY > maxY) {
+                    break;
+                }
                 String itemName = item.item().contains(":") ? item.item().split(":")[1].replace("_", " ") : item.item();
                 itemName = Character.toUpperCase(itemName.charAt(0)) + itemName.substring(1);
                 context.drawTextWithShadow(this.textRenderer, Text.literal("• " + itemName + " x" + item.count()), textX, textY, COLOR_VALUE);
                 textY += 10;
-                if (textY > this.height - PANEL_PADDING - 40) {
-                    break;
-                }
             }
         }
         textY += 4;
-        renderSkillPresets(context, textX, textY, this.height - PANEL_PADDING - 40, selected);
+        renderSkillPresets(context, textX, textY, maxY, selected);
     }
 
     private void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {
@@ -433,12 +478,12 @@ public class CreateCharacterScreen extends Screen {
         textY += 12;
 
         for (Map.Entry<String, Integer> entry : selected.getSkillPresets().entrySet()) {
-            Text skillName = Text.translatable("skill.levelz." + entry.getKey());
-            context.drawTextWithShadow(this.textRenderer, skillName.copy().append(" +" + entry.getValue()), textX, textY, COLOR_VALUE);
-            textY += 10;
             if (textY > maxY) {
                 break;
             }
+            Text skillName = Text.translatable("skill.levelz." + entry.getKey());
+            context.drawTextWithShadow(this.textRenderer, skillName.copy().append(" +" + entry.getValue()), textX, textY, COLOR_VALUE);
+            textY += 10;
         }
     }
 
@@ -464,10 +509,12 @@ public class CreateCharacterScreen extends Screen {
 
             boolean increase = info.value() > info.defaultValue();
             int tintColor = increase ? 0x5A55FF55 : 0x5AFF5555;
-            context.fill(x - 1, y - 1, x + ICON_RENDER_SIZE + 1, y + ICON_RENDER_SIZE + 1, tintColor);
-            context.drawTexture(info.icon(), x, y, ICON_RENDER_SIZE, ICON_RENDER_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            context.drawTexture(CLASS_BACKGROUND_TEXTURE, x - 1, y - 1, 148, 42, 13, 13);
 
-            int textY = y + (ICON_RENDER_SIZE - this.textRenderer.fontHeight) / 2;
+//            context.fill(x - 1, y - 1, x + ICON_RENDER_SIZE + 1, y + ICON_RENDER_SIZE + 1, tintColor);
+            context.drawTexture(info.icon(), x + 1, y + 1, ICON_RENDER_SIZE, ICON_RENDER_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+
+            int textY = y + 1 + (ICON_RENDER_SIZE - this.textRenderer.fontHeight) / 2;
             context.drawTextWithShadow(this.textRenderer, Text.literal(valueStr), x + ICON_RENDER_SIZE + 4, textY, COLOR_VALUE);
 
             if (mouseX >= x && mouseX < x + itemWidth && mouseY >= y && mouseY < y + ICON_RENDER_SIZE) {
