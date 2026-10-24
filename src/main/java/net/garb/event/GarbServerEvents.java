@@ -28,9 +28,6 @@ public class GarbServerEvents {
             return;
         }
         CharacterData data = CharacterSaveManager.load(server, player.getUuid(), slot);
-
-//        var spawnPos = server.getOverworld().getSpawnPos();
-//        data.setLastPosition(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, "minecraft:overworld");
         data.setHealth(player.getMaxHealth());
         CharacterSaveManager.save(server, player.getUuid(), slot, data);
     }
