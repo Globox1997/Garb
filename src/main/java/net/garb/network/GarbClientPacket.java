@@ -3,6 +3,7 @@ package net.garb.network;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.garb.character.CharacterClassRegistry;
 import net.garb.network.packet.*;
@@ -23,9 +24,10 @@ public class GarbClientPacket {
             context.client().execute(() -> {
                 Consumer<C2SSelectCharacterPacket> onSelect = ClientConfigurationNetworking::send;
                 Runnable onExit = () -> context.responseSender().disconnect(Text.translatable("disconnect.quitting"));
-                context.client().setScreen(new GarbScreen(packet.slots(), onSelect, onExit));
+                context.client().setScreen(new GarbScreen(packet.slots(), packet.errorKey(), onSelect, onExit));
             });
         });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientCharacterCache.clearAll());
         ClientConfigurationNetworking.registerGlobalReceiver(S2CClassDataPacket.ID, (packet, context) -> {
             context.client().execute(() -> {
                 CharacterClassRegistry.clear();

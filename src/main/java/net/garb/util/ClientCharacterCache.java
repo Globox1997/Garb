@@ -36,4 +36,9 @@ public class ClientCharacterCache {
         NAMES.remove(uuid);
         SKINS.remove(uuid);
     }
+
+    public static void clearAll() {
+        NAMES.clear();
+        SKINS.clear();
+    }
 }
