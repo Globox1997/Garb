@@ -1,6 +1,8 @@
 package net.garb.character;
 
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 public class CharacterData {
@@ -10,6 +12,7 @@ public class CharacterData {
     private String classId;
     private boolean exists;
     private long lastPlayed;
+    private float maxHealth;
 
     private NbtCompound playerNbt;
 
@@ -23,6 +26,7 @@ public class CharacterData {
     public void captureFromPlayer(ServerPlayerEntity player) {
         this.exists = true;
         this.lastPlayed = System.currentTimeMillis();
+        this.maxHealth = player.getMaxHealth();
 
         this.playerNbt = new NbtCompound();
         player.writeNbt(this.playerNbt);
@@ -36,6 +40,7 @@ public class CharacterData {
         nbt.putString("skinUsername", skinUsername != null ? skinUsername : "");
         nbt.putString("classId", classId != null ? classId : "");
         nbt.putLong("lastPlayed", lastPlayed);
+        nbt.putFloat("maxHealth", maxHealth);
         nbt.put("playerNbt", playerNbt != null ? playerNbt : new NbtCompound());
 
         return nbt;
@@ -59,6 +64,7 @@ public class CharacterData {
         data.skinUsername = nbt.contains("skinUsername") ? nbt.getString("skinUsername") : "";
         data.classId = nbt.contains("classId") ? nbt.getString("classId") : "";
         data.lastPlayed = nbt.getLong("lastPlayed");
+        data.maxHealth = nbt.getFloat("maxHealth");
         data.playerNbt = nbt.getCompound("playerNbt");
         return data;
     }
@@ -98,6 +104,19 @@ public class CharacterData {
     public float getHealth() {
         if (playerNbt == null) return 20f;
         if (playerNbt.contains("Health")) return playerNbt.getFloat("Health");
+        return 20f;
+    }
+
+    public float getMaxHealth() {
+        if (maxHealth > 0) return maxHealth;
+        if (playerNbt == null) return 20f;
+        NbtList attributes = playerNbt.getList("attributes", NbtElement.COMPOUND_TYPE);
+        for (int i = 0; i < attributes.size(); i++) {
+            NbtCompound attribute = attributes.getCompound(i);
+            if ("minecraft:generic.max_health".equals(attribute.getString("id"))) {
+                return (float) attribute.getDouble("base");
+            }
+        }
         return 20f;
     }
 
