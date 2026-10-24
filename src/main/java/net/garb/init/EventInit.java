@@ -50,13 +50,19 @@ public class EventInit {
                 GarbActiveCharacterCache.set(player.getUuid(), characterData.getName(), characterData.getSkinUsername());
                 GarbServerPacket.syncOnJoin(player, characterData.getName(), characterData.getSkinUsername());
 
+                boolean newCharacter = !characterData.exists();
                 optional.ifPresent(characterClass -> {
-                    if (!characterData.exists()) {
+                    if (newCharacter) {
                         ClassApplier.applyToNewCharacter(player, characterClass);
                     } else {
                         ClassApplier.applyOnLogin(player, characterClass);
                     }
                 });
+
+                if (newCharacter) {
+                    characterData.captureFromPlayer(player);
+                    CharacterSaveManager.save(player.getServer(), player.getUuid(), slot, characterData);
+                }
             }
 
         });
