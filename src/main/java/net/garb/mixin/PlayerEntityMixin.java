@@ -1,8 +1,6 @@
 package net.garb.mixin;
 
 import net.garb.character.GarbActiveCharacterCache;
-import net.garb.util.ClientCharacterCache;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -22,8 +20,6 @@ public class PlayerEntityMixin {
                     info.setReturnValue(Text.literal(active.name()));
                 }
             });
-        } else if ((Object) this instanceof AbstractClientPlayerEntity clientPlayer) {
-            ClientCharacterCache.getName(clientPlayer.getUuid()).ifPresent(name -> info.setReturnValue(Text.literal(name)));
         }
     }
 }
