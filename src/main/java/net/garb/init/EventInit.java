@@ -34,7 +34,7 @@ public class EventInit {
             handler.addTask(new CharacterSelectionTask());
 
             CharacterData[] slots = CharacterSaveManager.loadAll(server, handler.getDebugProfile().getId());
-            S2CCharacterDataPacket packet = S2CCharacterDataPacket.from(slots);
+            S2CCharacterDataPacket packet = S2CCharacterDataPacket.from(slots, server.getRegistryManager());
 
             ServerConfigurationNetworking.send(handler, S2CClassDataPacket.fromRegistry());
             ServerConfigurationNetworking.send(handler, packet);

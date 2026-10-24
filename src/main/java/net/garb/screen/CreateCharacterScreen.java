@@ -8,6 +8,7 @@ import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
 import net.garb.character.CharacterSaveManager;
 import net.garb.network.packet.C2SCheckNamePacket;
+import net.garb.util.PlayerModelRenderer;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -83,8 +84,8 @@ public class CreateCharacterScreen extends Screen {
     private static final int SKIN_FRAME_WIDTH = 50;
     private static final int SKIN_FRAME_HEIGHT = 62;
     private static final int SKIN_FRAME_Y = 111;
-    private static final int SKIN_PREVIEW_SCALE = 6;
-    private static final int SKIN_PREVIEW_Y = SKIN_FRAME_Y + (SKIN_FRAME_HEIGHT - SKIN_PREVIEW_SCALE * 8) / 2;
+    private static final int SKIN_PREVIEW_HEIGHT = 52;
+    private static final int SKIN_PREVIEW_Y = SKIN_FRAME_Y + (SKIN_FRAME_HEIGHT - SKIN_PREVIEW_HEIGHT) / 2;
     private static final int SKIN_STATUS_OFFSET = 22;
     private static final int NAME_STATUS_Y = 24;
     private static final int ATTRIBUTE_FRAME_U = 148;
@@ -312,8 +313,7 @@ public class CreateCharacterScreen extends Screen {
 
             case SUCCESS -> {
                 if (loadedSkinTexture != null) {
-                    int playerX = cx - SKIN_PREVIEW_SCALE * 2;
-                    drawPlayer(context, loadedSkinTexture, loadedSkinSlim, playerX, y, SKIN_PREVIEW_SCALE);
+                    PlayerModelRenderer.draw(context, loadedSkinTexture, loadedSkinSlim, List.of(), cx, y, SKIN_PREVIEW_HEIGHT);
                 }
             }
         }
@@ -411,22 +411,6 @@ public class CreateCharacterScreen extends Screen {
         }
         textY += 4;
         renderSkillPresets(context, textX, textY, maxY, selected);
-    }
-
-    private void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {
-        drawSkinPart(context, skin, x + scale, y, scale * 2, scale * 2, 8, 8, 8, 8);
-        drawSkinPart(context, skin, x + scale, y + scale * 2, scale * 2, scale * 3, 20, 20, 8, 12);
-        int armW = slim ? 3 : 4;
-        drawSkinPart(context, skin, x, y + scale * 2, scale, scale * 3, 44, 20, armW, 12);
-        drawSkinPart(context, skin, x + scale * 3, y + scale * 2, scale, scale * 3, 36, 52, armW, 12);
-        drawSkinPart(context, skin, x + scale, y + scale * 5, scale, scale * 3, 4, 20, 4, 12);
-        drawSkinPart(context, skin, x + scale * 2, y + scale * 5, scale, scale * 3, 20, 52, 4, 12);
-
-        drawSkinPart(context, skin, x + scale - 1, y - 1, scale * 2 + 2, scale * 2 + 2, 40, 8, 8, 8);
-    }
-
-    private void drawSkinPart(DrawContext context, Identifier texture, int x, int y, int w, int h, int u, int v, int rW, int rH) {
-        context.drawTexture(texture, x, y, w, h, u, v, rW, rH, 64, 64);
     }
 
     private void onCharacterNameChanged(String value) {

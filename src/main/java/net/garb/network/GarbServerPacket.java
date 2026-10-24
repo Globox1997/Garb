@@ -54,7 +54,7 @@ public class GarbServerPacket {
                     if (!data.exists()) {
                         String errorKey = validateNewCharacter(context.server(), packet);
                         if (errorKey != null) {
-                            ServerConfigurationNetworking.send(handler, S2CCharacterDataPacket.from(CharacterSaveManager.loadAll(context.server(), uuid), errorKey));
+                            ServerConfigurationNetworking.send(handler, S2CCharacterDataPacket.from(CharacterSaveManager.loadAll(context.server(), uuid), errorKey, context.server().getRegistryManager()));
                             return;
                         }
 

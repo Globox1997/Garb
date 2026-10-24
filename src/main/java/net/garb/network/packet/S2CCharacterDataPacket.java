@@ -5,6 +5,7 @@ import net.garb.character.CharacterData;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.registry.RegistryWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +16,7 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
 
     public static final PacketCodec<PacketByteBuf, S2CCharacterDataPacket> CODEC = PacketCodec.of(S2CCharacterDataPacket::write, S2CCharacterDataPacket::read);
 
-    public record SlotInfo(boolean exists, String name, String skinUsername, long lastPlayed, float health, float maxHealth, int foodLevel, int xpLevel) {
+    public record SlotInfo(boolean exists, String name, String skinUsername, long lastPlayed, float health, float maxHealth, int foodLevel, int xpLevel, List<CharacterData.WornArmor> armor) {
     }
 
 
@@ -31,6 +32,12 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
             buf.writeFloat(slot.maxHealth());
             buf.writeInt(slot.foodLevel());
             buf.writeInt(slot.xpLevel());
+            buf.writeInt(slot.armor().size());
+            for (CharacterData.WornArmor armor : slot.armor()) {
+                buf.writeString(armor.itemId());
+                buf.writeInt(armor.color());
+                buf.writeBoolean(armor.glint());
+            }
         }
     }
 
@@ -47,19 +54,24 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
             float maxHealth = buf.readFloat();
             int foodLevel = buf.readInt();
             int xpLevel = buf.readInt();
-            slots.add(new SlotInfo(exists, name, skinUsername, lastPlayed, health, maxHealth, foodLevel, xpLevel));
+            int armorCount = buf.readInt();
+            List<CharacterData.WornArmor> armor = new ArrayList<>(armorCount);
+            for (int j = 0; j < armorCount; j++) {
+                armor.add(new CharacterData.WornArmor(buf.readString(), buf.readInt(), buf.readBoolean()));
+            }
+            slots.add(new SlotInfo(exists, name, skinUsername, lastPlayed, health, maxHealth, foodLevel, xpLevel, armor));
         }
         return new S2CCharacterDataPacket(slots, errorKey);
     }
 
-    public static S2CCharacterDataPacket from(CharacterData[] dataSlots) {
-        return from(dataSlots, "");
+    public static S2CCharacterDataPacket from(CharacterData[] dataSlots, RegistryWrapper.WrapperLookup registries) {
+        return from(dataSlots, "", registries);
     }
 
-    public static S2CCharacterDataPacket from(CharacterData[] dataSlots, String errorKey) {
+    public static S2CCharacterDataPacket from(CharacterData[] dataSlots, String errorKey, RegistryWrapper.WrapperLookup registries) {
         List<SlotInfo> slots = new ArrayList<>();
         for (CharacterData data : dataSlots) {
-            slots.add(new SlotInfo(data.exists(), data.getName(), data.getSkinUsername(), data.getLastPlayed(), data.getHealth(), data.getMaxHealth(), data.getFoodLevel(), data.getExperienceLevel()));
+            slots.add(new SlotInfo(data.exists(), data.getName(), data.getSkinUsername(), data.getLastPlayed(), data.getHealth(), data.getMaxHealth(), data.getFoodLevel(), data.getExperienceLevel(), data.getWornArmor(registries)));
         }
         return new S2CCharacterDataPacket(slots, errorKey);
     }

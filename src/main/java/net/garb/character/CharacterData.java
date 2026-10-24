@@ -1,11 +1,26 @@
 package net.garb.character;
 
+import net.minecraft.component.type.DyedColorComponent;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CharacterData {
+
+    public record WornArmor(String itemId, int color, boolean glint) {
+    }
+
+    private static final int ARMOR_SLOT_START = 100;
+    private static final int ARMOR_SLOT_END = 103;
+    private static final int DEFAULT_DYE_COLOR = -6265536;
 
     private String name;
     private String skinUsername;
@@ -118,6 +133,26 @@ public class CharacterData {
             }
         }
         return 20f;
+    }
+
+    public List<WornArmor> getWornArmor(RegistryWrapper.WrapperLookup registries) {
+        List<WornArmor> armor = new ArrayList<>();
+        if (playerNbt == null) return armor;
+        NbtList inventory = playerNbt.getList("Inventory", NbtElement.COMPOUND_TYPE);
+        for (int i = 0; i < inventory.size(); i++) {
+            NbtCompound entry = inventory.getCompound(i);
+            int slot = entry.getByte("Slot") & 255;
+            if (slot < ARMOR_SLOT_START || slot > ARMOR_SLOT_END) {
+                continue;
+            }
+            ItemStack stack = ItemStack.fromNbtOrEmpty(registries, entry);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            int color = stack.isIn(ItemTags.DYEABLE) ? DyedColorComponent.getColor(stack, DEFAULT_DYE_COLOR) : -1;
+            armor.add(new WornArmor(Registries.ITEM.getId(stack.getItem()).toString(), color, stack.hasGlint()));
+        }
+        return armor;
     }
 
     public int getFoodLevel() {

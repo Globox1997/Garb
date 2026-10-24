@@ -5,6 +5,7 @@ import net.fabricmc.api.Environment;
 import net.garb.GarbMain;
 import net.garb.network.packet.C2SSelectCharacterPacket;
 import net.garb.network.packet.S2CCharacterDataPacket;
+import net.garb.util.PlayerModelRenderer;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -33,6 +34,8 @@ public class GarbScreen extends Screen {
     private static final int CARD_PADDING = 10;
     private static final int EXIT_BUTTON_SIZE = 20;
     private static final int EXIT_BUTTON_MARGIN = 6;
+    private static final int CARD_MODEL_HEIGHT = 40;
+    private static final int CARD_MODEL_GAP = 6;
 
     private static final Identifier CHARACTER_SLOT_TEXTURE = GarbMain.identifierOf("textures/gui/character_slot.png");
 
@@ -168,11 +171,8 @@ public class GarbScreen extends Screen {
 
         SlotSkin skin = index < this.slotSkins.size() ? this.slotSkins.get(index) : null;
         if (skin != null) {
-            int scale = 5;
-            int playerX = x + (CARD_WIDTH / 2) - (scale * 2);
-
-            drawPlayer(context, skin.textureId(), skin.slim(), playerX, textY, scale);
-            textY += scale * 8 + 6;
+            PlayerModelRenderer.draw(context, skin.textureId(), skin.slim(), slot.armor(), x + CARD_WIDTH / 2, textY, CARD_MODEL_HEIGHT);
+            textY += CARD_MODEL_HEIGHT + CARD_MODEL_GAP;
         } else {
             drawCenteredText(context, Text.literal("..."), x + CARD_WIDTH / 2, textY + 10, COLOR_EMPTY_TEXT);
             textY += 26;
@@ -218,24 +218,6 @@ public class GarbScreen extends Screen {
             return Text.translatable("screen.garb.last_played.m_ago", minutes);
         }
         return Text.translatable("screen.garb.last_played.just_now");
-    }
-
-    private static void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {
-        drawSkinPart(context, skin, x + scale, y, scale * 2, scale * 2, 8, 8, 8, 8);
-        drawSkinPart(context, skin, x + scale, y + scale * 2, scale * 2, scale * 3, 20, 20, 8, 12);
-
-        int armW = slim ? 3 : 4;
-        drawSkinPart(context, skin, x, y + scale * 2, scale, scale * 3, 44, 20, armW, 12);
-        drawSkinPart(context, skin, x + scale * 3, y + scale * 2, scale, scale * 3, 36, 52, armW, 12);
-
-        drawSkinPart(context, skin, x + scale, y + scale * 5, scale, scale * 3, 4, 20, 4, 12);
-        drawSkinPart(context, skin, x + scale * 2, y + scale * 5, scale, scale * 3, 20, 52, 4, 12);
-
-        drawSkinPart(context, skin, x + scale - 1, y - 1, scale * 2 + 2, scale * 2 + 2, 40, 8, 8, 8);
-    }
-
-    private static void drawSkinPart(DrawContext context, Identifier texture, int x, int y, int width, int height, int u, int v, int regionW, int regionH) {
-        context.drawTexture(texture, x, y, width, height, u, v, regionW, regionH, 64, 64);
     }
 
     private void drawIconStat(DrawContext context, Identifier icon, Text valueText, int x, int y, int color) {
