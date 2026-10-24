@@ -40,6 +40,7 @@ public class GarbScreen extends Screen {
     private static final int COLOR_CARD_HOVER = 0x30FFFFFF;
     private static final int COLOR_EMPTY_TEXT = 0xFF707070;
     private static final int COLOR_TITLE = 0xFFFFFFFF;
+    private static final int COLOR_ERROR = 0xFFFF5555;
     private static final int COLOR_CARD_TEXT = 0xFF404040;
     private static final int COLOR_LABEL = 0xFF606060;
     private static final int COLOR_HP = 0xFFAA0000;
@@ -51,18 +52,18 @@ public class GarbScreen extends Screen {
     private static final Identifier ICON_XP = Identifier.ofVanilla("textures/entity/experience_orb.png");
     private static final int ICON_SIZE = 9;
 
-    private int hoveredSlot = -1;
-
+    private final String errorKey;
     private final Consumer<C2SSelectCharacterPacket> selectCallback;
     private final Runnable exitCallback;
 
-    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, Consumer<C2SSelectCharacterPacket> selectCallback, Runnable exitCallback) {
+    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, String errorKey, Consumer<C2SSelectCharacterPacket> selectCallback, Runnable exitCallback) {
         super(Text.translatable("screen.garb.title"));
         this.slots = slots;
         this.slotSkins = new ArrayList<>();
         for (int i = 0; i < slots.size(); i++) {
             this.slotSkins.add(null);
         }
+        this.errorKey = errorKey;
         this.selectCallback = selectCallback;
         this.exitCallback = exitCallback;
     }
@@ -126,12 +127,13 @@ public class GarbScreen extends Screen {
         int cardsY = (this.height - CARD_HEIGHT) / 2;
 
         context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.title"), this.width / 2, cardsY - 24, COLOR_TITLE);
+        if (errorKey != null && !errorKey.isEmpty()) {
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable(errorKey), this.width / 2, cardsY - 12, COLOR_ERROR);
+        }
 
-        hoveredSlot = -1;
         for (int i = 0; i < slots.size(); i++) {
             int cardX = startX + i * (CARD_WIDTH + CARD_GAP);
             boolean hovered = isMouseOverCard(mouseX, mouseY, cardX, cardsY);
-            if (hovered) hoveredSlot = i;
             drawCard(context, slots.get(i), i, cardX, cardsY, hovered);
         }
     }
@@ -176,7 +178,7 @@ public class GarbScreen extends Screen {
             textY += 26;
         }
 
-        drawIconStat(context, ICON_HEALTH, Text.literal(String.format("%.1f / 20.0", slot.health())), textX, textY, COLOR_HP);
+        drawIconStat(context, ICON_HEALTH, Text.literal(String.format("%.1f / %.1f", slot.health(), slot.maxHealth())), textX, textY, COLOR_HP);
         textY += lineHeight + 2;
 
         drawIconStat(context, ICON_HUNGER, Text.literal(slot.foodLevel() + " / 20"), textX, textY, COLOR_HUNGER);
