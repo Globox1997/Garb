@@ -29,6 +29,12 @@
   "screen.garb.checking_name": "Checking Name",
   "screen.garb.name_taken": "Name Taken",
 
+  "screen.garb.error.name_required": "Your character needs a name",
+  "screen.garb.error.name_too_long": "That name is too long",
+  "screen.garb.error.name_taken": "That name is already taken",
+  "screen.garb.error.invalid_skin": "Invalid skin username",
+  "screen.garb.error.invalid_class": "That class does not exist",
+
   "screen.garb.last_played.d_ago": "%s d ago",
   "screen.garb.last_played.h_ago": "%s h ago",
   "screen.garb.last_played.m_ago": "%s m ago",
