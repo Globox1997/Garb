@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 public class CharacterSaveManager {
 
     public static final int SLOT_COUNT = 3;
+    public static final int NAME_MAX_LENGTH = 32;
 
     private static Path getSlotPath(MinecraftServer server, UUID playerUuid, int slot) {
         return server.getSavePath(WorldSavePath.ROOT).resolve("characters").resolve(playerUuid.toString()).resolve("slot_" + slot + ".nbt");

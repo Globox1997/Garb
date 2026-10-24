@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworkin
 import net.garb.GarbMain;
 import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
+import net.garb.character.CharacterSaveManager;
 import net.garb.network.packet.C2SCheckNamePacket;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
@@ -30,7 +31,7 @@ public class CreateCharacterScreen extends Screen {
     public record CreationResult(String characterName, String skinUsername, String classId) {
     }
 
-    private record AttributeIconInfo(Identifier icon, Text label, double value, double defaultValue) {
+    private record AttributeIconInfo(Identifier icon, Text label, double value) {
     }
 
     private final Screen parent;
@@ -77,6 +78,20 @@ public class CreateCharacterScreen extends Screen {
     private static final int CLASS_ICON_SIZE = 32;
     private static final int CLASS_ICON_FRAME_SIZE = 42;
     private static final int PANEL_EDGE = 4;
+    private static final int SKIN_FRAME_U = 148;
+    private static final int SKIN_FRAME_V = 55;
+    private static final int SKIN_FRAME_WIDTH = 50;
+    private static final int SKIN_FRAME_HEIGHT = 62;
+    private static final int SKIN_FRAME_Y = 111;
+    private static final int SKIN_PREVIEW_SCALE = 6;
+    private static final int SKIN_PREVIEW_Y = SKIN_FRAME_Y + (SKIN_FRAME_HEIGHT - SKIN_PREVIEW_SCALE * 8) / 2;
+    private static final int SKIN_STATUS_OFFSET = 22;
+    private static final int NAME_STATUS_Y = 24;
+    private static final int ATTRIBUTE_FRAME_U = 148;
+    private static final int ATTRIBUTE_FRAME_V = 42;
+    private static final int ATTRIBUTE_FRAME_SIZE = 13;
+    private static final int ATTRIBUTE_FRAME_OFFSET = 1;
+    private static final int ATTRIBUTE_FRAME_INSET = (ATTRIBUTE_FRAME_SIZE - ICON_RENDER_SIZE) / 2;
     private static final int CLASS_ARROW_SIZE = 20;
     private static final int CLASS_ARROW_GAP = 2;
     private static final int PANEL_GAP = 6;
@@ -112,14 +127,14 @@ public class CreateCharacterScreen extends Screen {
         int fieldW = leftPanelX2 - leftPanelX1 - PANEL_INNER_PADDING * 2;
 
         characterNameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + 34, fieldW, 20, Text.translatable("screen.garb.name"));
-        characterNameField.setMaxLength(32);
+        characterNameField.setMaxLength(CharacterSaveManager.NAME_MAX_LENGTH);
         characterNameField.setPlaceholder(Text.translatable("screen.garb.character_name_placeholder"));
         characterNameField.setChangedListener(this::onCharacterNameChanged);
         characterNameField.setFocused(true);
         this.addSelectableChild(characterNameField);
 
         skinUsernameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + 70, fieldW, 20, Text.translatable("screen.garb.skin_username"));
-        skinUsernameField.setMaxLength(32);
+        skinUsernameField.setMaxLength(CharacterSaveManager.NAME_MAX_LENGTH);
         skinUsernameField.setPlaceholder(Text.translatable("screen.garb.skin_username_placeholder"));
         skinUsernameField.setChangedListener(this::onSkinUsernameChanged);
         this.addSelectableChild(skinUsernameField);
@@ -128,7 +143,7 @@ public class CreateCharacterScreen extends Screen {
             skinUsernameField.setText(this.client.getSession().getUsername());
         }
 
-        int arrowY = panelY + (CLASS_BG_HEIGHT - CLASS_ARROW_SIZE) / 2;
+        int arrowY = panelY + (panelY2 - panelY - CLASS_ARROW_SIZE) / 2;
 
         this.addDrawableChild(ButtonWidget.builder(Text.literal("◀"), btn -> cycleClass(-1)).position(classBgX - CLASS_ARROW_GAP - CLASS_ARROW_SIZE, arrowY).size(CLASS_ARROW_SIZE, CLASS_ARROW_SIZE).build());
 
@@ -272,7 +287,7 @@ public class CreateCharacterScreen extends Screen {
 
         drawPanel(context, leftPanelX1, panelY, panelW, panelY2 - panelY);
 
-        context.drawTexture(CLASS_BACKGROUND_TEXTURE, panelCx-25, panelY+111, 148, 55, 50, 62);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, panelCx - SKIN_FRAME_WIDTH / 2, panelY + SKIN_FRAME_Y, SKIN_FRAME_U, SKIN_FRAME_V, SKIN_FRAME_WIDTH, SKIN_FRAME_HEIGHT);
 
         context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.character"), panelCx, panelY + 8, COLOR_TITLE);
 
@@ -282,24 +297,23 @@ public class CreateCharacterScreen extends Screen {
         context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_username"), x, panelY + 60, COLOR_LABEL);
         skinUsernameField.render(context, 0, 0, 0);
 
-        renderNameCheckStatus(context, panelCx, panelY + 24);
+        renderNameCheckStatus(context, leftPanelX2 - PANEL_INNER_PADDING, panelY + NAME_STATUS_Y);
 
-        renderSkinPreview(context, panelCx, panelY + 118);
+        renderSkinPreview(context, panelCx, panelY + SKIN_PREVIEW_Y);
     }
 
     private void renderSkinPreview(DrawContext context, int cx, int y) {
         switch (skinLoadState) {
-            case IDLE -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_preview_hint"), cx, y-22, COLOR_MUTED);
+            case IDLE -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_preview_hint"), cx, y - SKIN_STATUS_OFFSET, COLOR_MUTED);
 
-            case LOADING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_loading"), cx, y-22, COLOR_LABEL);
+            case LOADING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_loading"), cx, y - SKIN_STATUS_OFFSET, COLOR_LABEL);
 
-            case ERROR -> context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(skinErrorMessage), cx, y-22, COLOR_ERROR);
+            case ERROR -> context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(skinErrorMessage), cx, y - SKIN_STATUS_OFFSET, COLOR_ERROR);
 
             case SUCCESS -> {
                 if (loadedSkinTexture != null) {
-                    int scale = 6;
-                    int playerX = cx - scale * 2;
-                    drawPlayer(context, loadedSkinTexture, loadedSkinSlim, playerX, y, scale);
+                    int playerX = cx - SKIN_PREVIEW_SCALE * 2;
+                    drawPlayer(context, loadedSkinTexture, loadedSkinSlim, playerX, y, SKIN_PREVIEW_SCALE);
                 }
             }
         }
@@ -389,9 +403,9 @@ public class CreateCharacterScreen extends Screen {
                 if (textY > maxY) {
                     break;
                 }
-                String itemName = item.item().contains(":") ? item.item().split(":")[1].replace("_", " ") : item.item();
-                itemName = Character.toUpperCase(itemName.charAt(0)) + itemName.substring(1);
-                context.drawTextWithShadow(this.textRenderer, Text.literal("• " + itemName + " x" + item.count()), textX, textY, COLOR_VALUE);
+                Identifier itemId = Identifier.tryParse(item.item());
+                Text itemName = itemId != null && Registries.ITEM.containsId(itemId) ? Registries.ITEM.get(itemId).getName() : Text.literal(item.item());
+                context.drawTextWithShadow(this.textRenderer, Text.literal("• ").append(itemName).append(" x" + item.count()), textX, textY, COLOR_VALUE);
                 textY += 10;
             }
         }
@@ -400,13 +414,13 @@ public class CreateCharacterScreen extends Screen {
     }
 
     private void drawPlayer(DrawContext context, Identifier skin, boolean slim, int x, int y, int scale) {
-        drawSkinPart(context, skin, x + scale, y, scale * 2, scale * 2, 8, 8, 8, 8);  // Kopf
-        drawSkinPart(context, skin, x + scale, y + scale * 2, scale * 2, scale * 3, 20, 20, 8, 12); // Körper
+        drawSkinPart(context, skin, x + scale, y, scale * 2, scale * 2, 8, 8, 8, 8);
+        drawSkinPart(context, skin, x + scale, y + scale * 2, scale * 2, scale * 3, 20, 20, 8, 12);
         int armW = slim ? 3 : 4;
-        drawSkinPart(context, skin, x, y + scale * 2, scale, scale * 3, 44, 20, armW, 12); // R-Arm
-        drawSkinPart(context, skin, x + scale * 3, y + scale * 2, scale, scale * 3, 36, 52, armW, 12); // L-Arm
-        drawSkinPart(context, skin, x + scale, y + scale * 5, scale, scale * 3, 4, 20, 4, 12); // R-Bein
-        drawSkinPart(context, skin, x + scale * 2, y + scale * 5, scale, scale * 3, 20, 52, 4, 12); // L-Bein
+        drawSkinPart(context, skin, x, y + scale * 2, scale, scale * 3, 44, 20, armW, 12);
+        drawSkinPart(context, skin, x + scale * 3, y + scale * 2, scale, scale * 3, 36, 52, armW, 12);
+        drawSkinPart(context, skin, x + scale, y + scale * 5, scale, scale * 3, 4, 20, 4, 12);
+        drawSkinPart(context, skin, x + scale * 2, y + scale * 5, scale, scale * 3, 20, 52, 4, 12);
 
         drawSkinPart(context, skin, x + scale - 1, y - 1, scale * 2 + 2, scale * 2 + 2, 40, 8, 8, 8);
     }
@@ -435,13 +449,17 @@ public class CreateCharacterScreen extends Screen {
         nameCheckState = taken ? NameCheckState.TAKEN : NameCheckState.AVAILABLE;
     }
 
-    private void renderNameCheckStatus(DrawContext context, int cx, int y) {
+    private void renderNameCheckStatus(DrawContext context, int rightX, int y) {
         switch (nameCheckState) {
-            case CHECKING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.checking_name"), cx, y, COLOR_MUTED);
-            case TAKEN -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.name_taken"), cx, y, COLOR_ERROR);
+            case CHECKING -> drawRightAlignedText(context, Text.translatable("screen.garb.checking_name"), rightX, y, COLOR_MUTED);
+            case TAKEN -> drawRightAlignedText(context, Text.translatable("screen.garb.name_taken"), rightX, y, COLOR_ERROR);
             default -> {
             }
         }
+    }
+
+    private void drawRightAlignedText(DrawContext context, Text text, int rightX, int y, int color) {
+        context.drawTextWithShadow(this.textRenderer, text, rightX - this.textRenderer.getWidth(text), y, color);
     }
 
     private List<AttributeIconInfo> resolveChangedAttributeIcons(CharacterClass characterClass) {
@@ -463,7 +481,7 @@ public class CreateCharacterScreen extends Screen {
 
             Identifier icon = GarbMain.identifierOf("textures/attribute/" + attrId.getPath() + ".png");
             Text label = Text.translatable(attribute.getTranslationKey());
-            icons.add(new AttributeIconInfo(icon, label, value, defaultValue));
+            icons.add(new AttributeIconInfo(icon, label, value));
         }
 
         return icons;
@@ -507,17 +525,16 @@ public class CreateCharacterScreen extends Screen {
                 y += rowHeight + ICON_GAP;
             }
 
-            boolean increase = info.value() > info.defaultValue();
-            int tintColor = increase ? 0x5A55FF55 : 0x5AFF5555;
-            context.drawTexture(CLASS_BACKGROUND_TEXTURE, x - 1, y - 1, 148, 42, 13, 13);
+            int frameX = x - ATTRIBUTE_FRAME_OFFSET;
+            int frameY = y - ATTRIBUTE_FRAME_OFFSET;
+            context.drawTexture(CLASS_BACKGROUND_TEXTURE, frameX, frameY, ATTRIBUTE_FRAME_U, ATTRIBUTE_FRAME_V, ATTRIBUTE_FRAME_SIZE, ATTRIBUTE_FRAME_SIZE);
 
-//            context.fill(x - 1, y - 1, x + ICON_RENDER_SIZE + 1, y + ICON_RENDER_SIZE + 1, tintColor);
-            context.drawTexture(info.icon(), x + 1, y + 1, ICON_RENDER_SIZE, ICON_RENDER_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            context.drawTexture(info.icon(), frameX + ATTRIBUTE_FRAME_INSET, frameY + ATTRIBUTE_FRAME_INSET, ICON_RENDER_SIZE, ICON_RENDER_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 
-            int textY = y + 1 + (ICON_RENDER_SIZE - this.textRenderer.fontHeight) / 2;
+            int textY = frameY + ATTRIBUTE_FRAME_INSET + (ICON_RENDER_SIZE - this.textRenderer.fontHeight) / 2;
             context.drawTextWithShadow(this.textRenderer, Text.literal(valueStr), x + ICON_RENDER_SIZE + 4, textY, COLOR_VALUE);
 
-            if (mouseX >= x && mouseX < x + itemWidth && mouseY >= y && mouseY < y + ICON_RENDER_SIZE) {
+            if (mouseX >= frameX && mouseX < x + itemWidth && mouseY >= frameY && mouseY < frameY + ATTRIBUTE_FRAME_SIZE) {
                 context.drawTooltip(this.textRenderer, info.label(), mouseX, mouseY);
             }
 
