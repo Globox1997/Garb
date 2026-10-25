@@ -49,15 +49,23 @@ public class GarbScreen extends Screen {
     private static final int COLOR_HP = 0xFFAA0000;
     private static final int COLOR_HUNGER = 0xFFAA5500;
     private static final int COLOR_XP = 0xFF00AA00;
+    private static final int COLOR_THIRST = 0xFF0055AA;
+    private static final int COLOR_ARMOR = 0xFF3F3F9F;
 
     private static final Identifier ICON_HEALTH = GarbMain.identifierOf("textures/attribute/generic.max_health.png");
     private static final Identifier ICON_HUNGER = GarbMain.identifierOf("textures/attribute/generic.hunger.png");
     private static final Identifier ICON_XP = Identifier.ofVanilla("textures/entity/experience_orb.png");
+    private static final Identifier ICON_LEVELZ = GarbMain.identifierOf("textures/attribute/levelz_level.png");
+    private static final Identifier ICON_ARMOR = GarbMain.identifierOf("textures/attribute/generic.armor.png");
+    private static final Identifier ICON_THIRST = GarbMain.identifierOf("textures/attribute/generic.thirst.png");
     private static final int ICON_SIZE = 9;
     private static final int XP_ICON_SIZE = 8;
     private static final int XP_ICON_U = 4;
     private static final int XP_ICON_V = 4;
     private static final int XP_TEXTURE_SIZE = 64;
+    private static final int MAX_FOOD_LEVEL = 20;
+    private static final int MAX_THIRST_LEVEL = 20;
+    private static final int STAT_COLUMN_WIDTH = (CARD_WIDTH - CARD_PADDING * 2) / 2;
 
     private final String errorKey;
     private final Consumer<C2SSelectCharacterPacket> selectCallback;
@@ -176,19 +184,27 @@ public class GarbScreen extends Screen {
         SlotSkin skin = index < this.slotSkins.size() ? this.slotSkins.get(index) : null;
         if (skin != null) {
             PlayerModelRenderer.draw(context, skin.textureId(), skin.slim(), slot.armor(), slot.backItem(), slot.beltItem(), x + CARD_WIDTH / 2, textY, CARD_MODEL_HEIGHT);
-            textY += CARD_MODEL_HEIGHT + CARD_MODEL_GAP;
         } else {
-            drawCenteredText(context, Text.literal("..."), x + CARD_WIDTH / 2, textY + 10, COLOR_EMPTY_TEXT);
-            textY += 26;
+            drawCenteredText(context, Text.literal("..."), x + CARD_WIDTH / 2, textY + (CARD_MODEL_HEIGHT - this.textRenderer.fontHeight) / 2, COLOR_EMPTY_TEXT);
         }
+        textY += CARD_MODEL_HEIGHT + CARD_MODEL_GAP;
 
-        drawIconStat(context, ICON_HEALTH, Text.literal(String.format("%.1f/%.1f", slot.health(), slot.maxHealth())), textX, textY, COLOR_HP);
+        int secondColumnX = textX + STAT_COLUMN_WIDTH;
+        Text healthText = Text.literal((int) Math.ceil(slot.health()) + "/" + Math.round(slot.maxHealth()));
+        drawIconStat(context, ICON_HEALTH, healthText, textX, textY, COLOR_HP);
+        drawIconStat(context, ICON_HUNGER, Text.literal(slot.foodLevel() + "/" + MAX_FOOD_LEVEL), secondColumnX, textY, COLOR_HUNGER);
         textY += lineHeight + 2;
 
-        drawIconStat(context, ICON_HUNGER, Text.literal(slot.foodLevel() + "/20"), textX, textY, COLOR_HUNGER);
+        drawIconStat(context, ICON_ARMOR, Text.literal(String.valueOf(slot.armorPoints())), textX, textY, COLOR_ARMOR);
+        if (slot.thirstLevel() >= 0) {
+            drawIconStat(context, ICON_THIRST, Text.literal(slot.thirstLevel() + "/" + MAX_THIRST_LEVEL), secondColumnX, textY, COLOR_THIRST);
+        }
         textY += lineHeight + 2;
 
         drawIconStat(context, ICON_XP, Text.translatable("screen.garb.level", slot.xpLevel()), textX, textY, COLOR_XP);
+        if (slot.levelZLevel() >= 0) {
+            drawIconStat(context, ICON_LEVELZ, Text.translatable("screen.garb.level", slot.levelZLevel()), secondColumnX, textY, COLOR_XP);
+        }
         textY += lineHeight + 2;
 
         context.drawText(this.textRenderer, Text.translatable("screen.garb.last_played"), textX, textY, COLOR_LABEL, false);

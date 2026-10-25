@@ -1,6 +1,7 @@
 package net.garb.character;
 
 import net.minecraft.component.type.DyedColorComponent;
+import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -9,6 +10,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,7 @@ public class CharacterData {
     private boolean exists;
     private long lastPlayed;
     private float maxHealth;
+    private int armorPoints = -1;
 
     private NbtCompound playerNbt;
 
@@ -47,6 +50,7 @@ public class CharacterData {
         this.exists = true;
         this.lastPlayed = System.currentTimeMillis();
         this.maxHealth = player.getMaxHealth();
+        this.armorPoints = player.getArmor();
 
         this.playerNbt = new NbtCompound();
         player.writeNbt(this.playerNbt);
@@ -61,6 +65,7 @@ public class CharacterData {
         nbt.putString("classId", classId != null ? classId : "");
         nbt.putLong("lastPlayed", lastPlayed);
         nbt.putFloat("maxHealth", maxHealth);
+        nbt.putInt("armorPoints", armorPoints);
         nbt.put("playerNbt", playerNbt != null ? playerNbt : new NbtCompound());
 
         return nbt;
@@ -85,6 +90,7 @@ public class CharacterData {
         data.classId = nbt.contains("classId") ? nbt.getString("classId") : "";
         data.lastPlayed = nbt.getLong("lastPlayed");
         data.maxHealth = nbt.getFloat("maxHealth");
+        data.armorPoints = nbt.contains("armorPoints", NbtElement.NUMBER_TYPE) ? nbt.getInt("armorPoints") : -1;
         data.playerNbt = nbt.getCompound("playerNbt");
         return data;
     }
@@ -140,6 +146,17 @@ public class CharacterData {
         return 20f;
     }
 
+    public int getArmorPoints(RegistryWrapper.WrapperLookup registries) {
+        if (armorPoints >= 0) return armorPoints;
+        int points = 0;
+        for (WornArmor armor : getWornArmor(registries)) {
+            if (Registries.ITEM.get(Identifier.of(armor.itemId())) instanceof ArmorItem armorItem) {
+                points += armorItem.getProtection();
+            }
+        }
+        return points;
+    }
+
     public List<WornArmor> getWornArmor(RegistryWrapper.WrapperLookup registries) {
         List<WornArmor> armor = new ArrayList<>();
         if (playerNbt == null) return armor;
@@ -158,6 +175,16 @@ public class CharacterData {
             armor.add(new WornArmor(Registries.ITEM.getId(stack.getItem()).toString(), color, stack.hasGlint()));
         }
         return armor;
+    }
+
+    public int getLevelZLevel() {
+        if (playerNbt == null || !playerNbt.contains("Level", NbtElement.NUMBER_TYPE)) return -1;
+        return playerNbt.getInt("Level");
+    }
+
+    public int getThirstLevel() {
+        if (playerNbt == null || !playerNbt.contains("ThirstLevel", NbtElement.NUMBER_TYPE)) return -1;
+        return playerNbt.getInt("ThirstLevel");
     }
 
     public CarriedItem getBackSlotItem(RegistryWrapper.WrapperLookup registries) {

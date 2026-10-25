@@ -1,6 +1,7 @@
 package net.garb.network.packet;
 
 import net.garb.GarbMain;
+import net.fabricmc.loader.api.FabricLoader;
 import net.garb.character.CharacterData;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
@@ -16,7 +17,7 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
 
     public static final PacketCodec<PacketByteBuf, S2CCharacterDataPacket> CODEC = PacketCodec.of(S2CCharacterDataPacket::write, S2CCharacterDataPacket::read);
 
-    public record SlotInfo(boolean exists, String name, String skinUsername, long lastPlayed, float health, float maxHealth, int foodLevel, int xpLevel, List<CharacterData.WornArmor> armor, CharacterData.CarriedItem backItem, CharacterData.CarriedItem beltItem) {
+    public record SlotInfo(boolean exists, String name, String skinUsername, long lastPlayed, float health, float maxHealth, int foodLevel, int xpLevel, int armorPoints, int levelZLevel, int thirstLevel, List<CharacterData.WornArmor> armor, CharacterData.CarriedItem backItem, CharacterData.CarriedItem beltItem) {
     }
 
 
@@ -32,6 +33,9 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
             buf.writeFloat(slot.maxHealth());
             buf.writeInt(slot.foodLevel());
             buf.writeInt(slot.xpLevel());
+            buf.writeInt(slot.armorPoints());
+            buf.writeInt(slot.levelZLevel());
+            buf.writeInt(slot.thirstLevel());
             buf.writeInt(slot.armor().size());
             for (CharacterData.WornArmor armor : slot.armor()) {
                 buf.writeString(armor.itemId());
@@ -56,6 +60,9 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
             float maxHealth = buf.readFloat();
             int foodLevel = buf.readInt();
             int xpLevel = buf.readInt();
+            int armorPoints = buf.readInt();
+            int levelZLevel = buf.readInt();
+            int thirstLevel = buf.readInt();
             int armorCount = buf.readInt();
             List<CharacterData.WornArmor> armor = new ArrayList<>(armorCount);
             for (int j = 0; j < armorCount; j++) {
@@ -63,7 +70,7 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
             }
             CharacterData.CarriedItem backItem = readCarriedItem(buf);
             CharacterData.CarriedItem beltItem = readCarriedItem(buf);
-            slots.add(new SlotInfo(exists, name, skinUsername, lastPlayed, health, maxHealth, foodLevel, xpLevel, armor, backItem, beltItem));
+            slots.add(new SlotInfo(exists, name, skinUsername, lastPlayed, health, maxHealth, foodLevel, xpLevel, armorPoints, levelZLevel, thirstLevel, armor, backItem, beltItem));
         }
         return new S2CCharacterDataPacket(slots, errorKey);
     }
@@ -88,9 +95,11 @@ public record S2CCharacterDataPacket(List<SlotInfo> slots, String errorKey) impl
     }
 
     public static S2CCharacterDataPacket from(CharacterData[] dataSlots, String errorKey, RegistryWrapper.WrapperLookup registries) {
+        boolean levelZLoaded = FabricLoader.getInstance().isModLoaded("levelz");
+        boolean dehydrationLoaded = FabricLoader.getInstance().isModLoaded("dehydration");
         List<SlotInfo> slots = new ArrayList<>();
         for (CharacterData data : dataSlots) {
-            slots.add(new SlotInfo(data.exists(), data.getName(), data.getSkinUsername(), data.getLastPlayed(), data.getHealth(), data.getMaxHealth(), data.getFoodLevel(), data.getExperienceLevel(), data.getWornArmor(registries), data.getBackSlotItem(registries), data.getBeltSlotItem(registries)));
+            slots.add(new SlotInfo(data.exists(), data.getName(), data.getSkinUsername(), data.getLastPlayed(), data.getHealth(), data.getMaxHealth(), data.getFoodLevel(), data.getExperienceLevel(), data.getArmorPoints(registries), levelZLoaded ? data.getLevelZLevel() : -1, dehydrationLoaded ? data.getThirstLevel() : -1, data.getWornArmor(registries), data.getBackSlotItem(registries), data.getBeltSlotItem(registries)));
         }
         return new S2CCharacterDataPacket(slots, errorKey);
     }
