@@ -1,10 +1,12 @@
 package net.garb.init;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.garb.GarbMain;
 import net.garb.character.CharacterData;
 import net.garb.character.*;
 import net.garb.event.GarbServerEvents;
@@ -21,6 +23,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 public class EventInit {
+
+    private static final Identifier LATE_PHASE = GarbMain.identifierOf("late");
 
     public static void init() {
         ServerPlayConnectionEvents.DISCONNECT.register(GarbServerEvents::onPlayerDisconnect);
@@ -39,6 +43,9 @@ public class EventInit {
             ServerConfigurationNetworking.send(handler, S2CClassDataPacket.fromRegistry());
             ServerConfigurationNetworking.send(handler, packet);
         });
+
+        ServerPlayerEvents.AFTER_RESPAWN.addPhaseOrdering(Event.DEFAULT_PHASE, LATE_PHASE);
+        ServerPlayerEvents.AFTER_RESPAWN.register(LATE_PHASE, GarbServerEvents::onPlayerRespawn);
 
         ServerPlayerEvents.JOIN.register((player) -> {
             if (GarbPlayerManager.hasSelection(player.getUuid())) {
