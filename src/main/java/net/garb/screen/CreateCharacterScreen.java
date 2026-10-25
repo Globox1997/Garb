@@ -8,6 +8,7 @@ import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
 import net.garb.character.CharacterSaveManager;
 import net.garb.network.packet.C2SCheckNamePacket;
+import net.garb.util.ClassApplier;
 import net.garb.util.PlayerModelRenderer;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
@@ -32,7 +33,7 @@ public class CreateCharacterScreen extends Screen {
     public record CreationResult(String characterName, String skinUsername, String classId) {
     }
 
-    private record AttributeIconInfo(Identifier icon, Text label, double value) {
+    private record AttributeIconInfo(Identifier icon, Text label, double bonus) {
     }
 
     private final Screen parent;
@@ -465,7 +466,7 @@ public class CreateCharacterScreen extends Screen {
 
             Identifier icon = GarbMain.identifierOf("textures/attribute/" + attrId.getPath() + ".png");
             Text label = Text.translatable(attribute.getTranslationKey());
-            icons.add(new AttributeIconInfo(icon, label, value));
+            icons.add(new AttributeIconInfo(icon, label, ClassApplier.getBonus(attribute, value)));
         }
 
         return icons;
@@ -500,7 +501,7 @@ public class CreateCharacterScreen extends Screen {
         int y = startY;
 
         for (AttributeIconInfo info : icons) {
-            String valueStr = String.format("%.1f", info.value());
+            String valueStr = String.format("%+.1f", info.bonus());
             int textWidth = this.textRenderer.getWidth(valueStr);
             int itemWidth = ICON_RENDER_SIZE + 4 + textWidth;
 
