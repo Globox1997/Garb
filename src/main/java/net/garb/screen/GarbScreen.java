@@ -54,6 +54,10 @@ public class GarbScreen extends Screen {
     private static final Identifier ICON_HUNGER = GarbMain.identifierOf("textures/attribute/generic.hunger.png");
     private static final Identifier ICON_XP = Identifier.ofVanilla("textures/entity/experience_orb.png");
     private static final int ICON_SIZE = 9;
+    private static final int XP_ICON_SIZE = 8;
+    private static final int XP_ICON_U = 4;
+    private static final int XP_ICON_V = 4;
+    private static final int XP_TEXTURE_SIZE = 64;
 
     private final String errorKey;
     private final Consumer<C2SSelectCharacterPacket> selectCallback;
@@ -178,10 +182,10 @@ public class GarbScreen extends Screen {
             textY += 26;
         }
 
-        drawIconStat(context, ICON_HEALTH, Text.literal(String.format("%.1f / %.1f", slot.health(), slot.maxHealth())), textX, textY, COLOR_HP);
+        drawIconStat(context, ICON_HEALTH, Text.literal(String.format("%.1f/%.1f", slot.health(), slot.maxHealth())), textX, textY, COLOR_HP);
         textY += lineHeight + 2;
 
-        drawIconStat(context, ICON_HUNGER, Text.literal(slot.foodLevel() + " / 20"), textX, textY, COLOR_HUNGER);
+        drawIconStat(context, ICON_HUNGER, Text.literal(slot.foodLevel() + "/20"), textX, textY, COLOR_HUNGER);
         textY += lineHeight + 2;
 
         drawIconStat(context, ICON_XP, Text.translatable("screen.garb.level", slot.xpLevel()), textX, textY, COLOR_XP);
@@ -223,7 +227,7 @@ public class GarbScreen extends Screen {
     private void drawIconStat(DrawContext context, Identifier icon, Text valueText, int x, int y, int color) {
         if (icon.equals(ICON_XP)) {
             context.setShaderColor(0.5f, 1.0f, 0.2f, 1.0f);
-            context.drawTexture(icon, x, y, ICON_SIZE, ICON_SIZE, 32, 32, 16, 16, 64, 64);
+            context.drawTexture(icon, x, y + (ICON_SIZE - XP_ICON_SIZE) / 2, XP_ICON_SIZE, XP_ICON_SIZE, XP_ICON_U, XP_ICON_V, XP_ICON_SIZE, XP_ICON_SIZE, XP_TEXTURE_SIZE, XP_TEXTURE_SIZE);
             context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         } else {
             context.drawTexture(icon, x, y, ICON_SIZE, ICON_SIZE, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
