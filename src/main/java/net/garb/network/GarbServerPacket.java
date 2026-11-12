@@ -31,10 +31,25 @@ public class GarbServerPacket {
         PayloadTypeRegistry.playS2C().register(S2CPlayerCosmeticsPacket.ID, S2CPlayerCosmeticsPacket.CODEC);
         PayloadTypeRegistry.configurationC2S().register(C2SSelectCharacterPacket.ID, C2SSelectCharacterPacket.CODEC);
         PayloadTypeRegistry.configurationC2S().register(C2SCheckNamePacket.ID, C2SCheckNamePacket.CODEC);
+        PayloadTypeRegistry.configurationC2S().register(C2SDeleteCharacterPacket.ID, C2SDeleteCharacterPacket.CODEC);
 
         ServerConfigurationNetworking.registerGlobalReceiver(C2SCheckNamePacket.ID, (packet, context) -> context.server().execute(() -> {
             boolean taken = CharacterSaveManager.isNameTaken(context.server(), packet.name());
             ServerConfigurationNetworking.send(context.networkHandler(), new S2CNameCheckResultPacket(packet.name(), taken));
+        }));
+
+        ServerConfigurationNetworking.registerGlobalReceiver(C2SDeleteCharacterPacket.ID, (packet, context) -> context.server().execute(() -> {
+            ServerConfigurationNetworkHandler handler = context.networkHandler();
+            if (COMPLETED_SELECTIONS.contains(handler)) {
+                return;
+            }
+            int slot = packet.slot();
+            if (slot < 0 || slot >= CharacterSaveManager.SLOT_COUNT) {
+                return;
+            }
+            UUID uuid = handler.getDebugProfile().getId();
+            CharacterSaveManager.delete(context.server(), uuid, slot);
+            ServerConfigurationNetworking.send(handler, S2CCharacterDataPacket.from(CharacterSaveManager.loadAll(context.server(), uuid), context.server().getRegistryManager()));
         }));
 
         ServerConfigurationNetworking.registerGlobalReceiver(C2SSelectCharacterPacket.ID, (packet, context) -> context.server().execute(() -> {

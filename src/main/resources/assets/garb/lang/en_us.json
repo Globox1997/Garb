@@ -10,6 +10,9 @@
   "screen.garb.last_played": "Last played",
   "screen.garb.level": "Lv. %s",
   "screen.garb.exit": "X",
+  "screen.garb.delete": "Delete Character",
+  "screen.garb.delete_title": "Delete Character",
+  "screen.garb.delete_confirm": "Are you sure to delete this character?",
 
   "screen.garb.character": "Character",
   "screen.garb.create_character": "Create Character",

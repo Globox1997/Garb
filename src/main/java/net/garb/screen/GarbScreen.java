@@ -8,15 +8,20 @@ import net.garb.network.packet.S2CCharacterDataPacket;
 import net.garb.util.PlayerModelRenderer;
 import net.garb.util.SkinLoader;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.PressableWidget;
+import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 @Environment(EnvType.CLIENT)
 public class GarbScreen extends Screen {
@@ -35,6 +40,10 @@ public class GarbScreen extends Screen {
     private static final int EXIT_BUTTON_SIZE = 20;
     private static final int EXIT_BUTTON_MARGIN = 6;
     private static final int CARD_MODEL_HEIGHT = 40;
+    private static final int DELETE_BUTTON_SIZE = 9;
+    private static final int DELETE_BUTTON_U = 120;
+    private static final int DELETE_BUTTON_V = 0;
+    private static final int COLOR_DELETE_HOVER = 0x40FFFFFF;
     private static final int CARD_MODEL_GAP = 6;
 
     private static final Identifier CHARACTER_SLOT_TEXTURE = GarbMain.identifierOf("textures/gui/character_slot.png");
@@ -70,8 +79,10 @@ public class GarbScreen extends Screen {
     private final String errorKey;
     private final Consumer<C2SSelectCharacterPacket> selectCallback;
     private final Runnable exitCallback;
+    private final IntConsumer deleteCallback;
+    private final List<DeleteButton> deleteButtons = new ArrayList<>();
 
-    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, String errorKey, Consumer<C2SSelectCharacterPacket> selectCallback, Runnable exitCallback) {
+    public GarbScreen(List<S2CCharacterDataPacket.SlotInfo> slots, String errorKey, Consumer<C2SSelectCharacterPacket> selectCallback, Runnable exitCallback, IntConsumer deleteCallback) {
         super(Text.translatable("screen.garb.title"));
         this.slots = slots;
         this.slotSkins = new ArrayList<>();
@@ -81,6 +92,7 @@ public class GarbScreen extends Screen {
         this.errorKey = errorKey;
         this.selectCallback = selectCallback;
         this.exitCallback = exitCallback;
+        this.deleteCallback = deleteCallback;
     }
 
     @Override
@@ -91,6 +103,7 @@ public class GarbScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+        this.deleteButtons.clear();
         int totalWidth = slots.size() * CARD_WIDTH + (slots.size() - 1) * CARD_GAP;
         int startX = (this.width - totalWidth) / 2;
         int cardsY = (this.height - CARD_HEIGHT) / 2;
@@ -125,12 +138,27 @@ public class GarbScreen extends Screen {
                     }));
                 }
             }).position(cardX, buttonY).size(CARD_WIDTH, BUTTON_HEIGHT).build());
+
+            if (slots.get(i).exists()) {
+                DeleteButton deleteButton = new DeleteButton(cardX + CARD_WIDTH - CARD_PADDING - DELETE_BUTTON_SIZE, cardsY + CARD_PADDING, () -> confirmDelete(slot));
+                deleteButton.setTooltip(Tooltip.of(Text.translatable("screen.garb.delete")));
+                this.deleteButtons.add(this.addSelectableChild(deleteButton));
+            }
         }
 
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("screen.garb.exit"), btn -> exitCallback.run())
                 .tooltip(Tooltip.of(Text.translatable("menu.disconnect")))
                 .position(this.width - EXIT_BUTTON_SIZE - EXIT_BUTTON_MARGIN, EXIT_BUTTON_MARGIN)
                 .size(EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE).build());
+    }
+
+    private void confirmDelete(int slot) {
+        this.client.setScreen(new ConfirmScreen(confirmed -> {
+            this.client.setScreen(this);
+            if (confirmed) {
+                deleteCallback.accept(slot);
+            }
+        }, Text.translatable("screen.garb.delete_title"), Text.translatable("screen.garb.delete_confirm"), ScreenTexts.YES, ScreenTexts.NO));
     }
 
     @Override
@@ -150,6 +178,10 @@ public class GarbScreen extends Screen {
             int cardX = startX + i * (CARD_WIDTH + CARD_GAP);
             boolean hovered = isMouseOverCard(mouseX, mouseY, cardX, cardsY);
             drawCard(context, slots.get(i), i, cardX, cardsY, hovered);
+        }
+
+        for (DeleteButton deleteButton : deleteButtons) {
+            deleteButton.render(context, mouseX, mouseY, delta);
         }
     }
 
@@ -252,4 +284,31 @@ public class GarbScreen extends Screen {
         context.drawText(this.textRenderer, valueText, x + ICON_SIZE + 4, textY, color, false);
     }
 
+    private static class DeleteButton extends PressableWidget {
+
+        private final Runnable onPress;
+
+        DeleteButton(int x, int y, Runnable onPress) {
+            super(x, y, DELETE_BUTTON_SIZE, DELETE_BUTTON_SIZE, Text.translatable("screen.garb.delete"));
+            this.onPress = onPress;
+        }
+
+        @Override
+        public void onPress() {
+            onPress.run();
+        }
+
+        @Override
+        protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+            context.drawTexture(CHARACTER_SLOT_TEXTURE, getX(), getY(), DELETE_BUTTON_U, DELETE_BUTTON_V, DELETE_BUTTON_SIZE, DELETE_BUTTON_SIZE);
+            if (isSelected()) {
+                context.fill(getX(), getY(), getX() + DELETE_BUTTON_SIZE, getY() + DELETE_BUTTON_SIZE, COLOR_DELETE_HOVER);
+            }
+        }
+
+        @Override
+        protected void appendClickableNarrations(NarrationMessageBuilder builder) {
+            appendDefaultNarrations(builder);
+        }
+    }
 }

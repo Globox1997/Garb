@@ -24,7 +24,7 @@ public class GarbClientPacket {
             context.client().execute(() -> {
                 Consumer<C2SSelectCharacterPacket> onSelect = ClientConfigurationNetworking::send;
                 Runnable onExit = () -> context.responseSender().disconnect(Text.translatable("disconnect.quitting"));
-                context.client().setScreen(new GarbScreen(packet.slots(), packet.errorKey(), onSelect, onExit));
+                context.client().setScreen(new GarbScreen(packet.slots(), packet.errorKey(), onSelect, onExit, slot -> ClientConfigurationNetworking.send(new C2SDeleteCharacterPacket(slot))));
             });
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientCharacterCache.clearAll());
