@@ -20,6 +20,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,14 +87,32 @@ public class CreateCharacterScreen extends Screen {
     private static final int SKIN_FRAME_HEIGHT = 62;
     private static final int SKIN_FRAME_Y = 111;
     private static final int SKIN_PREVIEW_HEIGHT = 52;
-    private static final int SKIN_PREVIEW_Y = SKIN_FRAME_Y + (SKIN_FRAME_HEIGHT - SKIN_PREVIEW_HEIGHT) / 2;
-    private static final int SKIN_STATUS_OFFSET = 22;
+    private static final int NAME_FIELD_Y = 34;
+    private static final int SKIN_FIELD_Y = 70;
+    private static final int FIELD_HEIGHT = 20;
+    private static final int SKIN_FRAME_MIN_Y = SKIN_FIELD_Y + FIELD_HEIGHT + 8;
     private static final int NAME_STATUS_Y = 24;
     private static final int ATTRIBUTE_FRAME_U = 148;
     private static final int ATTRIBUTE_FRAME_V = 42;
     private static final int ATTRIBUTE_FRAME_SIZE = 13;
     private static final int ATTRIBUTE_FRAME_OFFSET = 1;
     private static final int ATTRIBUTE_FRAME_INSET = (ATTRIBUTE_FRAME_SIZE - ICON_RENDER_SIZE) / 2;
+    private static final int SCROLLBAR_U = 248;
+    private static final int SCROLLBAR_V = 0;
+    private static final int SCROLLBAR_WIDTH = 8;
+    private static final int SCROLLBAR_TEXTURE_HEIGHT = 27;
+    private static final int SCROLLBAR_EDGE = 1;
+    private static final int SCROLLBAR_THUMB_U = 242;
+    private static final int SCROLLBAR_THUMB_V = 0;
+    private static final int SCROLLBAR_THUMB_WIDTH = 6;
+    private static final int SCROLLBAR_THUMB_HEIGHT = 25;
+    private static final int SCROLLBAR_GAP = 3;
+    private static final int SCROLL_STEP = 10;
+    private static final int TEXTURE_SIZE = 256;
+    private static final int LIST_HEADER_HEIGHT = 12;
+    private static final int LIST_LINE_HEIGHT = 10;
+    private static final int LIST_SECTION_GAP = 4;
+    private static final String ELLIPSIS = "...";
     private static final int CLASS_ARROW_SIZE = 20;
     private static final int CLASS_ARROW_GAP = 2;
     private static final int PANEL_GAP = 6;
@@ -108,6 +127,13 @@ public class CreateCharacterScreen extends Screen {
     private int leftPanelX2;
     private int rightPanelX1;
     private int rightPanelX2;
+    private int skinFrameY;
+    private int listTop;
+    private int listBottom;
+    private int scrollbarX;
+    private int scrollOffset;
+    private int maxScroll;
+    private boolean draggingScrollbar;
     private static final int COLOR_CLASS_TEXT = 0xFF404040;
     private static final int COLOR_CLASS_MUTED = 0xFF606060;
 
@@ -128,20 +154,29 @@ public class CreateCharacterScreen extends Screen {
         int fieldX = leftPanelX1 + PANEL_INNER_PADDING;
         int fieldW = leftPanelX2 - leftPanelX1 - PANEL_INNER_PADDING * 2;
 
-        characterNameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + 34, fieldW, 20, Text.translatable("screen.garb.name"));
+        String previousName = characterNameField != null ? characterNameField.getText() : null;
+        String previousSkinUsername = skinUsernameField != null ? skinUsernameField.getText() : null;
+
+        characterNameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + NAME_FIELD_Y, fieldW, FIELD_HEIGHT, Text.translatable("screen.garb.name"));
         characterNameField.setMaxLength(CharacterSaveManager.NAME_MAX_LENGTH);
         characterNameField.setPlaceholder(Text.translatable("screen.garb.character_name_placeholder"));
+        if (previousName != null) {
+            characterNameField.setText(previousName);
+        }
         characterNameField.setChangedListener(this::onCharacterNameChanged);
         characterNameField.setFocused(true);
         this.addSelectableChild(characterNameField);
 
-        skinUsernameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + 70, fieldW, 20, Text.translatable("screen.garb.skin_username"));
+        skinUsernameField = new TextFieldWidget(this.textRenderer, fieldX, panelY + SKIN_FIELD_Y, fieldW, FIELD_HEIGHT, Text.translatable("screen.garb.skin_username"));
         skinUsernameField.setMaxLength(CharacterSaveManager.NAME_MAX_LENGTH);
         skinUsernameField.setPlaceholder(Text.translatable("screen.garb.skin_username_placeholder"));
+        if (previousSkinUsername != null) {
+            skinUsernameField.setText(previousSkinUsername);
+        }
         skinUsernameField.setChangedListener(this::onSkinUsernameChanged);
         this.addSelectableChild(skinUsernameField);
 
-        if (this.client != null && this.client.getSession() != null) {
+        if (previousSkinUsername == null && this.client != null && this.client.getSession() != null) {
             skinUsernameField.setText(this.client.getSession().getUsername());
         }
 
@@ -211,6 +246,7 @@ public class CreateCharacterScreen extends Screen {
             return;
         }
         selectedClassIndex = Math.floorMod(selectedClassIndex + direction, classes.size());
+        scrollOffset = 0;
     }
 
     private void confirm() {
@@ -262,6 +298,7 @@ public class CreateCharacterScreen extends Screen {
         int panelHeight = Math.min(CLASS_BG_HEIGHT, available);
         panelY = TITLE_AREA + Math.max(0, (available - panelHeight) / 2);
         panelY2 = panelY + panelHeight;
+        skinFrameY = Math.max(SKIN_FRAME_MIN_Y, Math.min(SKIN_FRAME_Y, panelHeight - SKIN_FRAME_HEIGHT - PANEL_EDGE));
 
         classBgX = this.width / 2 - CLASS_BG_WIDTH / 2;
 
@@ -289,7 +326,7 @@ public class CreateCharacterScreen extends Screen {
 
         drawPanel(context, leftPanelX1, panelY, panelW, panelY2 - panelY);
 
-        context.drawTexture(CLASS_BACKGROUND_TEXTURE, panelCx - SKIN_FRAME_WIDTH / 2, panelY + SKIN_FRAME_Y, SKIN_FRAME_U, SKIN_FRAME_V, SKIN_FRAME_WIDTH, SKIN_FRAME_HEIGHT);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, panelCx - SKIN_FRAME_WIDTH / 2, panelY + skinFrameY, SKIN_FRAME_U, SKIN_FRAME_V, SKIN_FRAME_WIDTH, SKIN_FRAME_HEIGHT);
 
         context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.character"), panelCx, panelY + 8, COLOR_TITLE);
 
@@ -301,16 +338,18 @@ public class CreateCharacterScreen extends Screen {
 
         renderNameCheckStatus(context, leftPanelX2 - PANEL_INNER_PADDING, panelY + NAME_STATUS_Y);
 
-        renderSkinPreview(context, panelCx, panelY + SKIN_PREVIEW_Y);
+        int previewY = panelY + skinFrameY + (SKIN_FRAME_HEIGHT - SKIN_PREVIEW_HEIGHT) / 2;
+        int statusY = panelY + (SKIN_FIELD_Y + FIELD_HEIGHT + skinFrameY) / 2 - this.textRenderer.fontHeight / 2;
+        renderSkinPreview(context, panelCx, previewY, statusY);
     }
 
-    private void renderSkinPreview(DrawContext context, int cx, int y) {
+    private void renderSkinPreview(DrawContext context, int cx, int y, int statusY) {
         switch (skinLoadState) {
-            case IDLE -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_preview_hint"), cx, y - SKIN_STATUS_OFFSET, COLOR_MUTED);
+            case IDLE -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_preview_hint"), cx, statusY, COLOR_MUTED);
 
-            case LOADING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_loading"), cx, y - SKIN_STATUS_OFFSET, COLOR_LABEL);
+            case LOADING -> context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skin_loading"), cx, statusY, COLOR_LABEL);
 
-            case ERROR -> context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(skinErrorMessage), cx, y - SKIN_STATUS_OFFSET, COLOR_ERROR);
+            case ERROR -> context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(skinErrorMessage), cx, statusY, COLOR_ERROR);
 
             case SUCCESS -> {
                 if (loadedSkinTexture != null) {
@@ -374,12 +413,12 @@ public class CreateCharacterScreen extends Screen {
         int panelW = rightPanelX2 - rightPanelX1;
         int panelCx = rightPanelX1 + panelW / 2;
         int textX = rightPanelX1 + PANEL_INNER_PADDING;
-        int maxY = panelY2 - 8 - this.textRenderer.fontHeight;
 
         drawPanel(context, rightPanelX1, panelY, panelW, panelY2 - panelY);
 
         context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("screen.garb.class_stats"), panelCx, panelY + 8, COLOR_TITLE);
 
+        maxScroll = 0;
         if (classes.isEmpty()) {
             return;
         }
@@ -393,25 +432,138 @@ public class CreateCharacterScreen extends Screen {
         context.fill(rightPanelX1 + PANEL_INNER_PADDING, textY, rightPanelX2 - PANEL_INNER_PADDING, textY + 1, COLOR_BORDER);
         textY += 6;
 
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.starter_items"), textX, textY, COLOR_LABEL);
-        textY += 12;
+        listTop = textY;
+        listBottom = panelY2 - PANEL_INNER_PADDING;
+        int contentHeight = getListContentHeight(selected);
+        maxScroll = Math.max(0, contentHeight - (listBottom - listTop));
+        scrollOffset = MathHelper.clamp(scrollOffset, 0, maxScroll);
+        scrollbarX = rightPanelX2 - PANEL_INNER_PADDING - SCROLLBAR_WIDTH;
+        int listRight = maxScroll > 0 ? scrollbarX - SCROLLBAR_GAP : rightPanelX2 - PANEL_INNER_PADDING;
+        int lineWidth = listRight - textX;
+        boolean mouseInList = mouseX >= textX && mouseX < listRight && mouseY >= listTop && mouseY < listBottom;
+        Text tooltip = null;
+
+        context.enableScissor(rightPanelX1, listTop, rightPanelX2, listBottom);
+        int y = listTop - scrollOffset;
+
+        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.starter_items"), textX, y, COLOR_LABEL);
+        y += LIST_HEADER_HEIGHT;
 
         if (selected.getStartingItems().isEmpty()) {
-            context.drawTextWithShadow(this.textRenderer, Text.literal("—"), textX, textY, COLOR_MUTED);
-            textY += 10;
+            context.drawTextWithShadow(this.textRenderer, Text.literal("—"), textX, y, COLOR_MUTED);
+            y += LIST_LINE_HEIGHT;
         } else {
             for (CharacterClass.StartItem item : selected.getStartingItems()) {
-                if (textY > maxY) {
-                    break;
-                }
                 Identifier itemId = Identifier.tryParse(item.item());
                 Text itemName = itemId != null && Registries.ITEM.containsId(itemId) ? Registries.ITEM.get(itemId).getName() : Text.literal(item.item());
-                context.drawTextWithShadow(this.textRenderer, Text.literal("• ").append(itemName).append(" x" + item.count()), textX, textY, COLOR_VALUE);
-                textY += 10;
+                Text fullLine = Text.literal("• ").append(itemName).append(" x" + item.count());
+                Text shownLine = fitLine("• ", itemName, " x" + item.count(), lineWidth);
+                context.drawTextWithShadow(this.textRenderer, shownLine, textX, y, COLOR_VALUE);
+                if (this.textRenderer.getWidth(fullLine) > lineWidth && mouseInList && mouseY >= y && mouseY < y + LIST_LINE_HEIGHT) {
+                    tooltip = fullLine;
+                }
+                y += LIST_LINE_HEIGHT;
             }
         }
-        textY += 4;
-        renderSkillPresets(context, textX, textY, maxY, selected);
+
+        if (!selected.getSkillPresets().isEmpty()) {
+            y += LIST_SECTION_GAP;
+            context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skill_presets"), textX, y, COLOR_LABEL);
+            y += LIST_HEADER_HEIGHT;
+
+            for (Map.Entry<String, Integer> entry : selected.getSkillPresets().entrySet()) {
+                Text skillName = Text.translatable("skill.levelz." + entry.getKey());
+                String prefix = "+" + entry.getValue() + " ";
+                Text fullLine = Text.literal(prefix).append(skillName);
+                Text shownLine = fitLine(prefix, skillName, "", lineWidth);
+                context.drawTextWithShadow(this.textRenderer, shownLine, textX, y, COLOR_VALUE);
+                if (this.textRenderer.getWidth(fullLine) > lineWidth && mouseInList && mouseY >= y && mouseY < y + LIST_LINE_HEIGHT) {
+                    tooltip = fullLine;
+                }
+                y += LIST_LINE_HEIGHT;
+            }
+        }
+        context.disableScissor();
+
+        if (maxScroll > 0) {
+            renderScrollbar(context);
+        }
+        if (tooltip != null) {
+            context.drawTooltip(this.textRenderer, tooltip, mouseX, mouseY);
+        }
+    }
+
+    private int getListContentHeight(CharacterClass selected) {
+        int height = LIST_HEADER_HEIGHT + Math.max(1, selected.getStartingItems().size()) * LIST_LINE_HEIGHT;
+        if (!selected.getSkillPresets().isEmpty()) {
+            height += LIST_SECTION_GAP + LIST_HEADER_HEIGHT + selected.getSkillPresets().size() * LIST_LINE_HEIGHT;
+        }
+        return height;
+    }
+
+    private Text fitLine(String prefix, Text name, String suffix, int maxWidth) {
+        Text fullLine = Text.literal(prefix).append(name).append(suffix);
+        if (this.textRenderer.getWidth(fullLine) <= maxWidth) {
+            return fullLine;
+        }
+        int nameWidth = Math.max(0, maxWidth - this.textRenderer.getWidth(prefix + ELLIPSIS + suffix));
+        return Text.literal(prefix + this.textRenderer.trimToWidth(name.getString(), nameWidth) + ELLIPSIS + suffix);
+    }
+
+    private void renderScrollbar(DrawContext context) {
+        int trackHeight = listBottom - listTop;
+        int innerHeight = trackHeight - SCROLLBAR_EDGE * 2;
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, scrollbarX, listTop, SCROLLBAR_U, SCROLLBAR_V, SCROLLBAR_WIDTH, SCROLLBAR_EDGE);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, scrollbarX, listTop + SCROLLBAR_EDGE, SCROLLBAR_WIDTH, innerHeight, SCROLLBAR_U, SCROLLBAR_V + SCROLLBAR_EDGE, SCROLLBAR_WIDTH, SCROLLBAR_TEXTURE_HEIGHT - SCROLLBAR_EDGE * 2, TEXTURE_SIZE, TEXTURE_SIZE);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, scrollbarX, listBottom - SCROLLBAR_EDGE, SCROLLBAR_U, SCROLLBAR_V + SCROLLBAR_TEXTURE_HEIGHT - SCROLLBAR_EDGE, SCROLLBAR_WIDTH, SCROLLBAR_EDGE);
+
+        int thumbTravel = Math.max(0, innerHeight - SCROLLBAR_THUMB_HEIGHT);
+        int thumbY = listTop + SCROLLBAR_EDGE + (maxScroll > 0 ? thumbTravel * scrollOffset / maxScroll : 0);
+        context.drawTexture(CLASS_BACKGROUND_TEXTURE, scrollbarX + SCROLLBAR_EDGE, thumbY, SCROLLBAR_THUMB_U, SCROLLBAR_THUMB_V, SCROLLBAR_THUMB_WIDTH, SCROLLBAR_THUMB_HEIGHT);
+    }
+
+    private boolean isOverScrollbar(double mouseX, double mouseY) {
+        return maxScroll > 0 && mouseX >= scrollbarX && mouseX < scrollbarX + SCROLLBAR_WIDTH && mouseY >= listTop && mouseY < listBottom;
+    }
+
+    private void scrollToMouse(double mouseY) {
+        int thumbTravel = Math.max(1, listBottom - listTop - SCROLLBAR_EDGE * 2 - SCROLLBAR_THUMB_HEIGHT);
+        double progress = (mouseY - listTop - SCROLLBAR_EDGE - SCROLLBAR_THUMB_HEIGHT / 2.0) / thumbTravel;
+        scrollOffset = MathHelper.clamp((int) Math.round(progress * maxScroll), 0, maxScroll);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (maxScroll > 0 && mouseX >= rightPanelX1 && mouseX < rightPanelX2 && mouseY >= listTop && mouseY < listBottom) {
+            scrollOffset = MathHelper.clamp(scrollOffset - (int) Math.round(verticalAmount * SCROLL_STEP), 0, maxScroll);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && isOverScrollbar(mouseX, mouseY)) {
+            draggingScrollbar = true;
+            scrollToMouse(mouseY);
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (draggingScrollbar) {
+            scrollToMouse(mouseY);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        draggingScrollbar = false;
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private void onCharacterNameChanged(String value) {
@@ -470,24 +622,6 @@ public class CreateCharacterScreen extends Screen {
         }
 
         return icons;
-    }
-
-    private void renderSkillPresets(DrawContext context, int textX, int textY, int maxY, CharacterClass selected) {
-        if (selected.getSkillPresets().isEmpty()) {
-            return;
-        }
-
-        context.drawTextWithShadow(this.textRenderer, Text.translatable("screen.garb.skill_presets"), textX, textY, COLOR_LABEL);
-        textY += 12;
-
-        for (Map.Entry<String, Integer> entry : selected.getSkillPresets().entrySet()) {
-            if (textY > maxY) {
-                break;
-            }
-            Text skillName = Text.translatable("skill.levelz." + entry.getKey());
-            context.drawTextWithShadow(this.textRenderer, Text.literal("+" + entry.getValue() + " ").append(skillName), textX, textY, COLOR_VALUE);
-            textY += 10;
-        }
     }
 
     private int renderAttributeIcons(DrawContext context, int startX, int startY, int maxWidth, List<AttributeIconInfo> icons, int mouseX, int mouseY) {
