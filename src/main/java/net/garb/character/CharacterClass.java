@@ -1,5 +1,6 @@
 package net.garb.character;
 
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.List;
@@ -25,7 +26,7 @@ public class CharacterClass {
         this.skillPresets = skillPresets;
     }
 
-    public record StartItem(String item, int count) {
+    public record StartItem(String item, int count, Text name) {
     }
 
     public Identifier getId() {

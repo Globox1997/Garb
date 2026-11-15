@@ -15,7 +15,7 @@ import net.minecraft.util.Identifier;
 public class LoaderInit {
 
     public static void init() {
-        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new GarbLoader());
+        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(GarbLoader.ID, GarbLoader::new);
 
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
             if (success) {

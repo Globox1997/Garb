@@ -40,6 +40,10 @@ Example:
     {
       "item": "minecraft:bread",
       "count": 8
+    },
+    {
+      "item": "minecraft:potion[potion_contents={potion:'minecraft:strength'}]",
+      "count": 1
     }
   ],
   "skills": {
@@ -50,3 +54,25 @@ Example:
 ```
 
 The skills part is a [LevelZ](https://github.com/Globox1997/LevelZ) integration. It applies skill presets.
+
+#### Starting items with components
+The `item` field of a starting item accepts a plain item id or an item with components, written like in the `/give` command.\
+The components are added to the item when the character gets created and the item name is shown on the create character screen.\
+Items which can't be parsed are skipped and logged.
+
+```json
+"starting_items": [
+  {
+    "item": "minecraft:potion[potion_contents={potion:'minecraft:strength'}]",
+    "count": 1
+  },
+  {
+    "item": "minecraft:iron_sword[enchantments={levels:{'minecraft:sharpness':2}},custom_name='\"Old Blade\"']",
+    "count": 1
+  },
+  {
+    "item": "minecraft:leather_chestplate[dyed_color={rgb:16711680}]",
+    "count": 1
+  }
+]
+```

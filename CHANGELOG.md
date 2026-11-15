@@ -1,7 +1,6 @@
 ### Added:
-- Character delete button
-- Scrollbar
+- Starter items accept components
 ### Fixed:
 - 
 ### Changed:
-- Tweaked long text lines
+- 

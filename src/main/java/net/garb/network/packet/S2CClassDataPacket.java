@@ -1,11 +1,17 @@
 package net.garb.network.packet;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
 import net.garb.GarbMain;
 import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.text.Text;
+import net.minecraft.text.TextCodecs;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
@@ -36,6 +42,7 @@ public record S2CClassDataPacket(List<CharacterClass> classes) implements Custom
             for (CharacterClass.StartItem item : characterClass.getStartingItems()) {
                 buf.writeString(item.item());
                 buf.writeInt(item.count());
+                buf.writeString(encodeName(item.name()));
             }
             buf.writeInt(characterClass.getSkillPresets().size());
             for (Map.Entry<String, Integer> skill : characterClass.getSkillPresets().entrySet()) {
@@ -62,7 +69,7 @@ public record S2CClassDataPacket(List<CharacterClass> classes) implements Custom
             int itemCount = buf.readInt();
             List<CharacterClass.StartItem> items = new ArrayList<>();
             for (int j = 0; j < itemCount; j++) {
-                items.add(new CharacterClass.StartItem(buf.readString(), buf.readInt()));
+                items.add(new CharacterClass.StartItem(buf.readString(), buf.readInt(), decodeName(buf.readString())));
             }
             int skillCount = buf.readInt();
             Map<String, Integer> skillPresets = new HashMap<>();
@@ -73,6 +80,24 @@ public record S2CClassDataPacket(List<CharacterClass> classes) implements Custom
             classes.add(new CharacterClass(id, displayName, icon, description, attributes, items, skillPresets));
         }
         return new S2CClassDataPacket(classes);
+    }
+
+    private static String encodeName(Text name) {
+        if (name == null) {
+            return "";
+        }
+        return TextCodecs.CODEC.encodeStart(JsonOps.INSTANCE, name).result().map(JsonElement::toString).orElse("");
+    }
+
+    private static Text decodeName(String json) {
+        if (json.isEmpty()) {
+            return null;
+        }
+        try {
+            return TextCodecs.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).result().orElse(null);
+        } catch (JsonParseException e) {
+            return null;
+        }
     }
 
     public static S2CClassDataPacket fromRegistry() {

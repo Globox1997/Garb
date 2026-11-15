@@ -454,8 +454,7 @@ public class CreateCharacterScreen extends Screen {
             y += LIST_LINE_HEIGHT;
         } else {
             for (CharacterClass.StartItem item : selected.getStartingItems()) {
-                Identifier itemId = Identifier.tryParse(item.item());
-                Text itemName = itemId != null && Registries.ITEM.containsId(itemId) ? Registries.ITEM.get(itemId).getName() : Text.literal(item.item());
+                Text itemName = item.name() != null ? item.name() : Text.literal(item.item());
                 Text fullLine = Text.literal("• ").append(itemName).append(" x" + item.count());
                 Text shownLine = fitLine("• ", itemName, " x" + item.count(), lineWidth);
                 context.drawTextWithShadow(this.textRenderer, shownLine, textX, y, COLOR_VALUE);

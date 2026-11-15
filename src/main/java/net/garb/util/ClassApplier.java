@@ -1,13 +1,16 @@
 package net.garb.util;
 
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.loader.api.FabricLoader;
-import net.garb.character.CharacterClass;
 import net.garb.GarbMain;
+import net.garb.character.CharacterClass;
 import net.garb.compat.GarbLevelZCompat;
+import net.garb.data.GarbLoader;
+import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -63,9 +66,14 @@ public class ClassApplier {
     }
 
     private static void giveStartingItems(ServerPlayerEntity player, CharacterClass characterClass) {
+        ItemStringReader itemStringReader = new ItemStringReader(player.getRegistryManager());
         for (CharacterClass.StartItem startItem : characterClass.getStartingItems()) {
-            Item item = Registries.ITEM.get(Identifier.of(startItem.item()));
-            player.getInventory().insertStack(new ItemStack(item, startItem.count()));
+            try {
+                ItemStringReader.ItemResult result = itemStringReader.consume(new StringReader(startItem.item()));
+                player.getInventory().insertStack(new ItemStack(result.item(), startItem.count(), result.components()));
+            } catch (CommandSyntaxException e) {
+                GarbLoader.LOGGER.warn("Could not give starting item {} of class {}: {}", startItem.item(), characterClass.getId(), e.getMessage());
+            }
         }
     }
 

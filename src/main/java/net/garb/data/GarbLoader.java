@@ -3,14 +3,19 @@ package net.garb.data;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
 import net.garb.GarbMain;
 import net.garb.character.CharacterClass;
 import net.garb.character.CharacterClassRegistry;
 import net.garb.init.ConfigInit;
+import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.entity.attribute.EntityAttribute;
+import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
@@ -24,17 +29,25 @@ import java.util.*;
 public class GarbLoader implements SimpleSynchronousResourceReloadListener {
 
     public static final Logger LOGGER = LogManager.getLogger("Garb");
+    public static final Identifier ID = GarbMain.identifierOf("garb_loader");
 
     private static final List<String> DEFAULT = List.of("garb:archer", "garb:farmer", "garb:miner", "garb:nomad", "garb:warrior");
 
+    private final RegistryWrapper.WrapperLookup registries;
+
+    public GarbLoader(RegistryWrapper.WrapperLookup registries) {
+        this.registries = registries;
+    }
+
     @Override
     public Identifier getFabricId() {
-        return GarbMain.identifierOf("garb_loader");
+        return ID;
     }
 
     @Override
     public void reload(ResourceManager resourceManager) {
         CharacterClassRegistry.clear();
+        ItemStringReader itemStringReader = new ItemStringReader(this.registries);
 
         resourceManager.findResources("classes", id -> id.getPath().endsWith(".json")).forEach((id, resource) -> {
             try (InputStream stream = resource.getInputStream()) {
@@ -44,7 +57,7 @@ public class GarbLoader implements SimpleSynchronousResourceReloadListener {
                     return;
                 }
 
-                CharacterClass garbClass = parse(json);
+                CharacterClass garbClass = parse(json, itemStringReader);
                 CharacterClassRegistry.register(garbClass);
             } catch (Exception e) {
                 LOGGER.error("Failed to load class file {}: {}", id, e.toString());
@@ -53,7 +66,7 @@ public class GarbLoader implements SimpleSynchronousResourceReloadListener {
         LOGGER.info("Loaded {} classes total", CharacterClassRegistry.getAll().size());
     }
 
-    private CharacterClass parse(JsonObject json) {
+    private CharacterClass parse(JsonObject json, ItemStringReader itemStringReader) {
         String classId = json.get("id").getAsString();
         Identifier id = Identifier.of(classId);
         String displayName = json.get("display_name").getAsString();
@@ -79,12 +92,20 @@ public class GarbLoader implements SimpleSynchronousResourceReloadListener {
             for (JsonElement el : json.getAsJsonArray("starting_items")) {
                 JsonObject obj = el.getAsJsonObject();
                 String item = obj.get("item").getAsString();
-                if (Registries.ITEM.get(Identifier.of(item)).getDefaultStack().isEmpty()) {
+                ItemStack stack;
+                try {
+                    ItemStringReader.ItemResult result = itemStringReader.consume(new StringReader(item));
+                    stack = new ItemStack(result.item(), 1, result.components());
+                } catch (CommandSyntaxException e) {
+                    LOGGER.warn("Item {} is an invalid item in class {}: {}", item, classId, e.getMessage());
+                    continue;
+                }
+                if (stack.isEmpty()) {
                     LOGGER.warn("Item {} is an invalid item id in class {}.", item, classId);
                     continue;
                 }
                 int count = obj.has("count") ? obj.get("count").getAsInt() : 1;
-                startingItems.add(new CharacterClass.StartItem(item, count));
+                startingItems.add(new CharacterClass.StartItem(item, count, stack.getName()));
             }
         }
 
