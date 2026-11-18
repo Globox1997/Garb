@@ -37,6 +37,7 @@ public class EventInit {
         ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> {
             handler.addTask(new CharacterSelectionTask());
 
+            CharacterSaveManager.importVanillaPlayer(server, handler.getDebugProfile());
             CharacterData[] slots = CharacterSaveManager.loadAll(server, handler.getDebugProfile().getId());
             S2CCharacterDataPacket packet = S2CCharacterDataPacket.from(slots, server.getRegistryManager());
 

@@ -82,6 +82,16 @@ public class CharacterData {
         return nbt;
     }
 
+    public static CharacterData fromVanillaPlayer(NbtCompound playerNbt, String name, long lastPlayed) {
+        CharacterData data = new CharacterData();
+        data.exists = true;
+        data.name = name;
+        data.skinUsername = name;
+        data.lastPlayed = lastPlayed;
+        data.playerNbt = playerNbt;
+        return data;
+    }
+
     public static CharacterData fromNbt(NbtCompound nbt) {
         CharacterData data = new CharacterData();
         data.exists = nbt.getBoolean("exists");
