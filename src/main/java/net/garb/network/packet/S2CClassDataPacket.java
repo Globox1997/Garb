@@ -32,6 +32,7 @@ public record S2CClassDataPacket(List<CharacterClass> classes) implements Custom
             buf.writeString(characterClass.getDisplayName());
             buf.writeString(characterClass.getIcon().toString());
             buf.writeString(characterClass.getDescription());
+            buf.writeInt(characterClass.getOrder());
 
             buf.writeInt(characterClass.getAttributes().size());
             for (Map.Entry<String, Double> attr : characterClass.getAttributes().entrySet()) {
@@ -60,6 +61,7 @@ public record S2CClassDataPacket(List<CharacterClass> classes) implements Custom
             String displayName = buf.readString();
             Identifier icon = Identifier.of(buf.readString());
             String description = buf.readString();
+            int order = buf.readInt();
 
             int attrCount = buf.readInt();
             Map<String, Double> attributes = new HashMap<>();
@@ -77,7 +79,7 @@ public record S2CClassDataPacket(List<CharacterClass> classes) implements Custom
                 skillPresets.put(buf.readString(), buf.readInt());
             }
 
-            classes.add(new CharacterClass(id, displayName, icon, description, attributes, items, skillPresets));
+            classes.add(new CharacterClass(id, displayName, icon, description, attributes, items, skillPresets, order));
         }
         return new S2CClassDataPacket(classes);
     }

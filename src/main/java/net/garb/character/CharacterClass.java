@@ -15,8 +15,9 @@ public class CharacterClass {
     private final Map<String, Double> attributes;
     private final List<StartItem> startingItems;
     private final Map<String, Integer> skillPresets;
+    private final int order;
 
-    public CharacterClass(Identifier id, String displayName, Identifier icon, String description, Map<String, Double> attributes, List<StartItem> startingItems, Map<String, Integer> skillPresets) {
+    public CharacterClass(Identifier id, String displayName, Identifier icon, String description, Map<String, Double> attributes, List<StartItem> startingItems, Map<String, Integer> skillPresets, int order) {
         this.id = id;
         this.displayName = displayName;
         this.icon = icon;
@@ -24,9 +25,14 @@ public class CharacterClass {
         this.attributes = attributes;
         this.startingItems = startingItems;
         this.skillPresets = skillPresets;
+        this.order = order;
     }
 
     public record StartItem(String item, int count, Text name) {
+    }
+
+    public int getOrder() {
+        return order;
     }
 
     public Identifier getId() {

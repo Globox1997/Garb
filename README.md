@@ -25,6 +25,7 @@ Example:
   "display_name": "Warrior",
   "icon": "garb:textures/class/warrior.png",
   "description": "A tough melee fighter with high health and armor.",
+  "order": 1,
   "attributes": {
     "minecraft:generic.max_health": 30.0,
     "minecraft:generic.attack_damage": 4.0,
@@ -54,6 +55,10 @@ Example:
 ```
 
 The skills part is a [LevelZ](https://github.com/Globox1997/LevelZ) integration. It applies skill presets.
+
+#### Class order
+The optional `order` field sets the position of the class on the create character screen.\
+Classes with a lower order are shown first, classes without an order use `0` and classes with the same order are sorted by their id.
 
 #### Starting items with components
 The `item` field of a starting item accepts a plain item id or an item with components, written like in the `/give` command.\

@@ -120,6 +120,8 @@ public class GarbLoader implements SimpleSynchronousResourceReloadListener {
             }
         }
 
-        return new CharacterClass(id, displayName, icon, description, attributes, startingItems, skillPresets);
+        int order = json.has("order") ? json.get("order").getAsInt() : 0;
+
+        return new CharacterClass(id, displayName, icon, description, attributes, startingItems, skillPresets, order);
     }
 }
